@@ -1,0 +1,225 @@
+/* ===========================================================================
+   Ledger — the Internship Tracker design system. §4.2 tokens verbatim.
+   Age is the only thing in the interface that gets color. Everything else is
+   neutral. One accessory, worn deliberately.
+   =========================================================================== */
+
+:root {
+  /* Neutrals — cool paper, ink with a green undertone. */
+  --paper:        #F4F5F3;
+  --surface:      #FFFFFF;
+  --ink:          #101413;
+  --ink-2:        #46504C;
+  --ink-3:        #79837E;
+  --rule:         #DDE1DE;
+  --rule-strong:  #C3C9C5;
+
+  /* Decay ramp — the only chromatic scale in the system. */
+  --age-0:        #0E6B57;   /* < 6h   */
+  --age-1:        #2E7D6B;   /* 6-24h  */
+  --age-2:        #5A8A80;   /* 1-3d   */
+  --age-3:        #8A9994;   /* 3-7d   */
+  --age-4:        #C3C9C5;   /* > 7d — indistinguishable from a rule */
+
+  /* System state — used only by SystemBanner. */
+  --warn:         #8A5A12;
+  --warn-bg:      #FBF3E2;
+
+  /* Type */
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-ui:      'Instrument Sans', system-ui, sans-serif;
+  --font-data:    'JetBrains Mono', ui-monospace, monospace;
+
+  --t-display:    clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+  --t-title:      1.0625rem;
+  --t-body:       0.9375rem;
+  --t-meta:       0.8125rem;
+  --t-micro:      0.6875rem;
+
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px;
+
+  --r-sm: 3px; --r-md: 6px;
+  --rail-w: 3px;
+  --shadow-card: none;
+  --shadow-pop:  0 2px 12px rgb(16 20 19 / 0.10);
+
+  --dur-fast: 120ms; --dur-base: 200ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+}
+@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; } }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--t-body);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+
+.mono { font-family: var(--font-data); }
+
+/* --- Layout ------------------------------------------------------------- */
+.shell { max-width: 1120px; margin: 0 auto; padding: 0 var(--s-4) var(--s-7); }
+
+.masthead {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: var(--s-4); flex-wrap: wrap;
+  padding: var(--s-6) 0 var(--s-4);
+  border-bottom: 1px solid var(--rule);
+}
+.wordmark {
+  font-family: var(--font-display);
+  font-size: var(--t-display);
+  font-weight: 700; letter-spacing: -0.02em; line-height: 1;
+}
+.wordmark span { color: var(--age-0); }
+.masthead__meta { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-3); }
+.masthead__meta a { border-bottom: 1px solid var(--rule-strong); }
+
+.eyebrow {
+  font-family: var(--font-data);
+  font-size: var(--t-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-3);
+}
+
+/* --- FilterBar ---------------------------------------------------------- */
+.filterbar { padding: var(--s-5) 0; border-bottom: 1px solid var(--rule); }
+.filterrow { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; margin-bottom: var(--s-4); }
+.filterrow:last-child { margin-bottom: 0; }
+.filterrow__label {
+  font-family: var(--font-data); font-size: var(--t-micro);
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3);
+  width: 84px; flex: none;
+}
+fieldset { border: 0; margin: 0; padding: 0; display: contents; }
+legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* Segmented control (Type) */
+.segmented { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: var(--r-md); overflow: hidden; }
+.segmented a {
+  padding: var(--s-2) var(--s-4); font-size: var(--t-meta);
+  color: var(--ink-2); border-right: 1px solid var(--rule);
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  transition: background var(--dur-fast) var(--ease);
+}
+.segmented a:last-child { border-right: 0; }
+.segmented a:hover { background: var(--paper); }
+.segmented a[aria-current="true"] { background: var(--ink); color: var(--paper); }
+.segmented a .count { font-family: var(--font-data); font-size: var(--t-micro); opacity: 0.7; }
+
+/* --- Chip --------------------------------------------------------------- */
+.chip {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule); border-radius: var(--r-sm);
+  background: transparent; color: var(--ink-2);
+  font-size: var(--t-meta); font-family: var(--font-ui);
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.chip:hover { border-color: var(--rule-strong); }
+.chip[data-selected="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.chip[data-disabled="true"] { color: var(--ink-3); opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.chip .count { font-family: var(--font-data); font-size: var(--t-micro); opacity: 0.75; }
+.chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* --- SystemBanner ------------------------------------------------------- */
+.banner {
+  background: var(--warn-bg); color: var(--warn);
+  font-family: var(--font-data); font-size: var(--t-meta);
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-sm);
+  margin: var(--s-5) 0 0;
+}
+
+/* --- Job grid ----------------------------------------------------------- */
+.gridhead {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: var(--s-5) 0 var(--s-3);
+}
+.gridhead__count { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-3); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+
+/* --- JobCard (§5.1) ----------------------------------------------------- */
+.card {
+  position: relative; display: block; background: var(--surface);
+  padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5);
+  transition: background var(--dur-fast) var(--ease);
+}
+.card::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+  width: var(--rail-w); background: var(--rail-color, var(--age-4));
+  transition: width var(--dur-fast) var(--ease);
+}
+.card:hover { background: #FFFFFF; }
+.card:hover::before { width: 5px; }
+.card:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.card:active { transform: translateY(1px); }
+.card--unclassified::before { background: repeating-linear-gradient(var(--ink-3) 0 4px, transparent 4px 8px); }
+.card--inactive { opacity: 0.6; }
+.card--inactive::before { background: var(--age-4); }
+
+.card__eyebrow { margin-bottom: var(--s-2); display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
+.card__company { font-size: var(--t-body); font-weight: 600; color: var(--ink); }
+.card__title {
+  font-size: var(--t-title); color: var(--ink); margin: var(--s-1) 0 var(--s-3);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  line-height: 1.3;
+}
+.card__foot {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
+  font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-3);
+}
+.card__loc { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card__loc .more { color: var(--ink-3); }
+.card__age { flex: none; display: inline-flex; align-items: center; gap: var(--s-2); }
+.card__new {
+  font-family: var(--font-data); font-size: var(--t-micro); letter-spacing: 0.06em;
+  color: var(--age-0); border: 1px solid var(--age-0); border-radius: 2px;
+  padding: 1px 4px; text-transform: uppercase;
+}
+.card__remote {
+  font-family: var(--font-data); font-size: var(--t-micro);
+  color: var(--ink-3); border: 1px solid var(--rule-strong); border-radius: 2px; padding: 0 4px;
+}
+
+/* Skeleton (loading) */
+.skeleton { background: var(--surface); padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5); position: relative; }
+.skeleton::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--rail-w); background: var(--age-4); }
+.skeleton .bar { height: 12px; background: var(--rule); border-radius: 2px; margin-bottom: var(--s-3); }
+
+/* --- EmptyState --------------------------------------------------------- */
+.empty { padding: var(--s-7) var(--s-4); text-align: center; background: var(--surface); border: 1px solid var(--rule); }
+.empty__title { font-size: var(--t-title); margin-bottom: var(--s-3); }
+.empty__filters { display: flex; gap: var(--s-2); justify-content: center; flex-wrap: wrap; margin-top: var(--s-4); }
+
+/* Active-filter summary row */
+.activefilters { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; padding-top: var(--s-4); }
+.activefilters__clear { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-2); border-bottom: 1px solid var(--rule-strong); }
+.pill {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  padding: 2px var(--s-2); border: 1px solid var(--rule-strong); border-radius: var(--r-sm);
+  font-family: var(--font-data); font-size: var(--t-micro); color: var(--ink-2);
+}
+.pill .x { color: var(--ink-3); }
+
+/* --- StatusPage --------------------------------------------------------- */
+.statustable { width: 100%; border-collapse: collapse; font-size: var(--t-meta); margin-top: var(--s-5); }
+.statustable th, .statustable td { padding: var(--s-3); border-bottom: 1px solid var(--rule); text-align: left; }
+.statustable th { font-family: var(--font-data); font-size: var(--t-micro); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 500; }
+.statustable td.num, .statustable th.num { font-family: var(--font-data); text-align: right; }
+.statustable .status-ok { color: var(--age-0); }
+.statustable .status-failed { color: var(--warn); }
+.statustable .status-skipped { color: var(--ink-3); }
+
+.backlink { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-3); }
+.backlink:hover { color: var(--ink-2); }

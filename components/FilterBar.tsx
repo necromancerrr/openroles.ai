@@ -1,0 +1,137 @@
+// FilterBar — §5.4. Narrowest-to-widest, top to bottom:
+//   1. Type  — segmented (Internships · New grad · Unclassified)
+//   2. Term  — chips, internships only (row disappears on other tabs)
+//   3. Category — chips, six canonical values
+//   4. Location — top ~12 chips + type-ahead for the tail
+// All counts are computed server-side from the current filter state (§5.2).
+
+import Link from 'next/link';
+import type { Job, Category, Term, JobType } from '@/lib/types';
+import type { Filters } from '@/lib/filter';
+import { typeCounts, facetCounts } from '@/lib/filter';
+import { CATEGORY_LABELS, CATEGORY_ORDER, TERM_LABELS, TERM_ORDER, locSlug } from '@/lib/taxonomy';
+import { Chip } from './Chip';
+import { LocationTypeahead } from './LocationTypeahead';
+import { toggleHref, setTypeHref, type SP } from '@/lib/url';
+
+const TYPE_TABS: { value: JobType; label: string }[] = [
+  { value: 'internship', label: 'Internships' },
+  { value: 'new_grad', label: 'New grad' },
+  { value: 'unknown', label: 'Unclassified' },
+];
+
+export function FilterBar({
+  jobs,
+  filters,
+  sp,
+}: {
+  jobs: Job[];
+  filters: Filters;
+  sp: SP;
+}) {
+  const tCounts = typeCounts(jobs, filters);
+
+  const termCounts = facetCounts<Term>(jobs, filters, 'term', (j) => j.terms);
+  const catCounts = facetCounts<Category>(jobs, filters, 'category', (j) => [j.category]);
+  const locCounts = facetCounts<string>(jobs, filters, 'location', (j) =>
+    j.locations.map(locSlug),
+  );
+
+  // Top ~12 locations by count for chips; the rest go to the type-ahead.
+  const locByLabel = new Map<string, { slug: string; count: number }>();
+  for (const j of jobs) {
+    // only count within the current type tab for a stable head
+    if (j.type !== filters.type) continue;
+    for (const l of j.locations) {
+      const slug = locSlug(l);
+      const cur = locByLabel.get(l) ?? { slug, count: 0 };
+      cur.count++;
+      locByLabel.set(l, cur);
+    }
+  }
+  const locSorted = [...locByLabel.entries()].sort((a, b) => b[1].count - a[1].count);
+  const topLocs = locSorted.slice(0, 12);
+  const tailLocs = locSorted.slice(12).map(([label]) => label);
+
+  const slugFor: Record<string, string> = {};
+  const hrefFor: Record<string, string> = {};
+  for (const [label, { slug }] of locSorted) {
+    slugFor[label] = slug;
+    hrefFor[slug] = toggleHref(sp, 'loc', slug);
+  }
+
+  const showTerms = filters.type === 'internship';
+
+  return (
+    <div className="filterbar">
+      {/* 1. Type */}
+      <div className="filterrow">
+        <span className="filterrow__label">Type</span>
+        <div className="segmented" role="tablist" aria-label="Job type">
+          {TYPE_TABS.map((tab) => (
+            <Link
+              key={tab.value}
+              href={setTypeHref(sp, tab.value)}
+              role="tab"
+              aria-current={filters.type === tab.value}
+              scroll={false}
+            >
+              {tab.label}
+              <span className="count">{tCounts[tab.value]}</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. Term — internships only */}
+      {showTerms && (
+        <fieldset className="filterrow">
+          <legend>Filter by term</legend>
+          <span className="filterrow__label" aria-hidden>Term</span>
+          {TERM_ORDER.map((t) => (
+            <Chip
+              key={t}
+              label={TERM_LABELS[t]}
+              count={termCounts.get(t) ?? 0}
+              selected={filters.terms.has(t)}
+              href={toggleHref(sp, 'term', t)}
+            />
+          ))}
+        </fieldset>
+      )}
+
+      {/* 3. Category */}
+      <fieldset className="filterrow">
+        <legend>Filter by category</legend>
+        <span className="filterrow__label" aria-hidden>Category</span>
+        {CATEGORY_ORDER.map((c) => (
+          <Chip
+            key={c}
+            label={CATEGORY_LABELS[c]}
+            count={catCounts.get(c) ?? 0}
+            selected={filters.categories.has(c)}
+            href={toggleHref(sp, 'category', c)}
+          />
+        ))}
+      </fieldset>
+
+      {/* 4. Location */}
+      <fieldset className="filterrow">
+        <legend>Filter by location</legend>
+        <span className="filterrow__label" aria-hidden>Location</span>
+        {topLocs.map(([label, { slug }]) => (
+          <Chip
+            key={slug}
+            label={label}
+            count={locCounts.get(slug) ?? 0}
+            selected={filters.locations.has(slug)}
+            href={toggleHref(sp, 'loc', slug)}
+          />
+        ))}
+        {tailLocs.length > 0 && (
+          <LocationTypeahead options={tailLocs} slugFor={slugFor} hrefFor={hrefFor} />
+        )}
+      </fieldset>
+    </div>
+  );
+}
