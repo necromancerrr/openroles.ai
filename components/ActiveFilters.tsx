@@ -5,25 +5,51 @@ import Link from 'next/link';
 import type { Filters } from '@/lib/filter';
 import { CATEGORY_LABELS, TERM_LABELS } from '@/lib/taxonomy';
 import type { Category, Term } from '@/lib/types';
-import { removeHref, type SP } from '@/lib/url';
+import {
+  removeHref,
+  clearQueryHref,
+  toggleFlagHref,
+  type SP,
+} from '@/lib/url';
 
 export function ActiveFilterPills({ filters, sp }: { filters: Filters; sp: SP }) {
-  const pills: { key: string; value: string; label: string }[] = [];
+  // Each pill carries the href that removes it — one link, one thing removed.
+  const pills: { id: string; label: string; href: string }[] = [];
 
+  if (filters.query)
+    pills.push({
+      id: 'q',
+      label: `“${filters.query}”`,
+      href: clearQueryHref(sp),
+    });
   for (const t of filters.terms)
-    pills.push({ key: 'term', value: t, label: TERM_LABELS[t as Term] });
+    pills.push({
+      id: `term:${t}`,
+      label: TERM_LABELS[t as Term],
+      href: removeHref(sp, 'term', t),
+    });
   for (const c of filters.categories)
-    pills.push({ key: 'category', value: c, label: CATEGORY_LABELS[c as Category] });
+    pills.push({
+      id: `category:${c}`,
+      label: CATEGORY_LABELS[c as Category],
+      href: removeHref(sp, 'category', c),
+    });
+  if (filters.remote)
+    pills.push({ id: 'remote', label: 'Remote', href: toggleFlagHref(sp, 'remote') });
   for (const l of filters.locations)
-    pills.push({ key: 'loc', value: l, label: l.replace(/-/g, ' ') });
+    pills.push({
+      id: `loc:${l}`,
+      label: l.replace(/-/g, ' '),
+      href: removeHref(sp, 'loc', l),
+    });
 
   return (
     <>
       {pills.map((p) => (
         <Link
-          key={`${p.key}:${p.value}`}
+          key={p.id}
           className="pill"
-          href={removeHref(sp, p.key, p.value)}
+          href={p.href}
           scroll={false}
           aria-label={`Remove filter ${p.label}`}
         >
@@ -34,10 +60,21 @@ export function ActiveFilterPills({ filters, sp }: { filters: Filters; sp: SP })
   );
 }
 
+// Does anything narrow the board right now? Type is always set, so it doesn't
+// count — it's a tab, not a filter.
+export function hasActiveFilters(filters: Filters): boolean {
+  return (
+    filters.terms.size +
+      filters.categories.size +
+      filters.locations.size +
+      (filters.query ? 1 : 0) +
+      (filters.remote ? 1 : 0) >
+    0
+  );
+}
+
 export function ActiveFilterSummary({ filters, sp }: { filters: Filters; sp: SP }) {
-  const has =
-    filters.terms.size + filters.categories.size + filters.locations.size > 0;
-  if (!has) return null;
+  if (!hasActiveFilters(filters)) return null;
   return (
     <div className="activefilters">
       <span className="eyebrow">Active</span>

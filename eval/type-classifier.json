@@ -1,0 +1,64 @@
+{
+  "recorded_at": "2026-07-28T07:08:34.582Z",
+  "source": "full active feed",
+  "results": [
+    {
+      "classifier": "keyword-strict",
+      "total": 4248,
+      "by_class": {
+        "internship": {
+          "n": 1407,
+          "correct": 1157,
+          "wrong": 7,
+          "hidden": 243,
+          "recall_pct": 82.2,
+          "wrong_pct": 0.5,
+          "hidden_pct": 17.3
+        },
+        "new_grad": {
+          "n": 2841,
+          "correct": 339,
+          "wrong": 0,
+          "hidden": 2502,
+          "recall_pct": 11.9,
+          "wrong_pct": 0,
+          "hidden_pct": 88.1
+        }
+      },
+      "overall": {
+        "correct_pct": 35.2,
+        "wrong_pct": 0.2,
+        "hidden_pct": 64.6
+      }
+    },
+    {
+      "classifier": "keyword-broad",
+      "total": 4248,
+      "by_class": {
+        "internship": {
+          "n": 1407,
+          "correct": 1157,
+          "wrong": 246,
+          "hidden": 4,
+          "recall_pct": 82.2,
+          "wrong_pct": 17.5,
+          "hidden_pct": 0.3
+        },
+        "new_grad": {
+          "n": 2841,
+          "correct": 2651,
+          "wrong": 0,
+          "hidden": 190,
+          "recall_pct": 93.3,
+          "wrong_pct": 0,
+          "hidden_pct": 6.7
+        }
+      },
+      "overall": {
+        "correct_pct": 89.6,
+        "wrong_pct": 5.8,
+        "hidden_pct": 4.6
+      }
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 'use client';
 
 // Type-ahead for the location tail — §2.4 / §5.4. Top locations get chips; the
-// long tail (383 distinct values) is reachable here. A datalist keeps it a thin
-// client island: pick a value, we navigate to the same URL-param filter the
-// chips use, so state stays in the query string.
+// long tail (795 distinct values across both feeds, measured) is reachable
+// here. A datalist keeps it a thin client island: pick a value, we navigate to
+// the same URL-param filter the chips use, so state stays in the query string.
 //
 // Props are deliberately two scalars. Passing label→slug and slug→href maps for
 // every tail location put ~40KB of duplicated strings in the RSC payload; the

@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import type { Filters } from '@/lib/filter';
-import { ActiveFilterPills } from './ActiveFilters';
+import { ActiveFilterPills, hasActiveFilters } from './ActiveFilters';
 import type { SP } from '@/lib/url';
 
 export function EmptyState({
@@ -15,15 +15,16 @@ export function EmptyState({
   sp: SP;
   typeLabel: string;
 }) {
-  const hasFacets =
-    filters.terms.size + filters.categories.size + filters.locations.size > 0;
+  const narrowed = hasActiveFilters(filters);
 
   return (
     <div className="empty">
       <div className="empty__title">
-        No {typeLabel} postings match these filters.
+        {filters.query
+          ? `No ${typeLabel} postings match “${filters.query}”.`
+          : `No ${typeLabel} postings match these filters.`}
       </div>
-      {hasFacets ? (
+      {narrowed ? (
         <>
           <div className="eyebrow">Remove a filter to widen the search</div>
           <div className="empty__filters">

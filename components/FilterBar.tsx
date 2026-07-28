@@ -8,11 +8,18 @@
 import Link from 'next/link';
 import type { Job, Category, Term, JobType } from '@/lib/types';
 import type { Filters } from '@/lib/filter';
-import { typeCounts, facetCounts } from '@/lib/filter';
+import { typeCounts, facetCounts, remoteCount } from '@/lib/filter';
 import { CATEGORY_LABELS, CATEGORY_ORDER, TERM_LABELS, TERM_ORDER } from '@/lib/taxonomy';
 import { Chip } from './Chip';
 import { LocationTypeahead } from './LocationTypeahead';
-import { toggleHref, setTypeHref, SLUG_PLACEHOLDER, type SP } from '@/lib/url';
+import { SearchBox } from './SearchBox';
+import {
+  toggleHref,
+  setTypeHref,
+  toggleFlagHref,
+  SLUG_PLACEHOLDER,
+  type SP,
+} from '@/lib/url';
 
 const TYPE_TABS: { value: JobType; label: string }[] = [
   { value: 'internship', label: 'Internships' },
@@ -59,6 +66,12 @@ export function FilterBar({
 
   return (
     <div className="filterbar">
+      {/* 0. Search — widest possible net, so it sits above the facets. */}
+      <div className="filterrow">
+        <span className="filterrow__label">Search</span>
+        <SearchBox sp={sp} query={filters.query} />
+      </div>
+
       {/* 1. Type */}
       <div className="filterrow">
         <span className="filterrow__label">Type</span>
@@ -114,6 +127,14 @@ export function FilterBar({
       <fieldset className="filterrow">
         <legend>Filter by location</legend>
         <span className="filterrow__label" aria-hidden>Location</span>
+        {/* Distinct from the "Remote in USA" location value below: this is the
+            derived isRemote flag across every remote-ish location string. */}
+        <Chip
+          label="Remote only"
+          count={remoteCount(jobs, filters)}
+          selected={filters.remote}
+          href={toggleFlagHref(sp, 'remote')}
+        />
         {topLocs.map(([label, { slug }]) => (
           <Chip
             key={slug}

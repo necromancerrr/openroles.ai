@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "ingest:sources": "node --experimental-strip-types scripts/generate-sources.ts"
+    "ingest:sources": "node --experimental-strip-types scripts/generate-sources.ts",
+    "eval:classifier": "node --experimental-strip-types scripts/eval-classifier.ts"
   },
   "dependencies": {
     "next": "^16.2.11",

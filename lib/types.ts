@@ -34,6 +34,10 @@ export interface RawListing {
   title: string;
   active: boolean;
   terms?: string[];
+  // vanshb03's feed carries a bare season ("Summer", "Fall") with no year.
+  // Declared so it's clear we see it and deliberately don't map it — see the
+  // note on that source in ingest.ts.
+  season?: string;
   date_updated: number;
   date_posted: number;
   url: string;
@@ -65,6 +69,9 @@ export interface Job {
   // Company mark (§5.1). Resolved once at ingest — see lib/logo.ts.
   initials: string;
   logoUrl?: string;
+  // Lowercased `company + title`, the haystack for the search box. Built once at
+  // ingest so a keystroke doesn't re-lowercase 4k strings five times over.
+  search: string;
   // Unix seconds. `firstSeenAt` drives the decay rail (§4.1). In a persisted
   // system this is "our first fetch"; here we approximate with date_posted.
   datePosted: number;

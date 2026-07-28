@@ -52,6 +52,49 @@ export function setTypeHref(sp: SP, value: string): string {
   return build(copy);
 }
 
+// Toggle a boolean param that's either present as `1` or absent (Remote only).
+export function toggleFlagHref(sp: SP, key: string): string {
+  const copy: SP = { ...sp };
+  if (copy[key] === '1') delete copy[key];
+  else copy[key] = '1';
+  delete copy.n;
+  return build(copy);
+}
+
+// Density is presentation, not a filter: it doesn't touch the result set, so it
+// keeps whatever window the reader has already scrolled open.
+export function setDensityHref(sp: SP, value: 'comfortable' | 'compact'): string {
+  const copy: SP = { ...sp };
+  if (value === 'compact') copy.d = 'compact';
+  else delete copy.d;
+  return build(copy);
+}
+
+export function parseDensity(sp: SP): 'comfortable' | 'compact' {
+  const raw = Array.isArray(sp.d) ? sp.d[0] : sp.d;
+  return raw === 'compact' ? 'compact' : 'comfortable';
+}
+
+// The search box is a plain GET form, so it submits only its own fields. Every
+// other bit of filter state has to ride along as a hidden input — except `q`
+// itself (the text input owns it) and `n` (a new query is a new result set).
+export function carriedParams(sp: SP): { name: string; value: string }[] {
+  const out: { name: string; value: string }[] = [];
+  for (const [k, v] of Object.entries(sp)) {
+    if (k === 'q' || k === 'n' || v == null) continue;
+    const val = Array.isArray(v) ? v.join(',') : v;
+    if (val) out.push({ name: k, value: val });
+  }
+  return out;
+}
+
+export function clearQueryHref(sp: SP): string {
+  const copy: SP = { ...sp };
+  delete copy.q;
+  delete copy.n;
+  return build(copy);
+}
+
 // --- Paging (`n` = how many cards to render) ------------------------------
 // The board is 1.4k+ postings deep. Rendering all of them costs megabytes of
 // markup and RSC payload for a surface nobody scrolls past the first screen of,
