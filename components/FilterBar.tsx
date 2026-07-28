@@ -9,10 +9,10 @@ import Link from 'next/link';
 import type { Job, Category, Term, JobType } from '@/lib/types';
 import type { Filters } from '@/lib/filter';
 import { typeCounts, facetCounts } from '@/lib/filter';
-import { CATEGORY_LABELS, CATEGORY_ORDER, TERM_LABELS, TERM_ORDER, locSlug } from '@/lib/taxonomy';
+import { CATEGORY_LABELS, CATEGORY_ORDER, TERM_LABELS, TERM_ORDER } from '@/lib/taxonomy';
 import { Chip } from './Chip';
 import { LocationTypeahead } from './LocationTypeahead';
-import { toggleHref, setTypeHref, type SP } from '@/lib/url';
+import { toggleHref, setTypeHref, SLUG_PLACEHOLDER, type SP } from '@/lib/url';
 
 const TYPE_TABS: { value: JobType; label: string }[] = [
   { value: 'internship', label: 'Internships' },
@@ -33,32 +33,27 @@ export function FilterBar({
 
   const termCounts = facetCounts<Term>(jobs, filters, 'term', (j) => j.terms);
   const catCounts = facetCounts<Category>(jobs, filters, 'category', (j) => [j.category]);
-  const locCounts = facetCounts<string>(jobs, filters, 'location', (j) =>
-    j.locations.map(locSlug),
-  );
+  const locCounts = facetCounts<string>(jobs, filters, 'location', (j) => j.locSlugs);
 
   // Top ~12 locations by count for chips; the rest go to the type-ahead.
   const locByLabel = new Map<string, { slug: string; count: number }>();
   for (const j of jobs) {
     // only count within the current type tab for a stable head
     if (j.type !== filters.type) continue;
-    for (const l of j.locations) {
-      const slug = locSlug(l);
-      const cur = locByLabel.get(l) ?? { slug, count: 0 };
+    for (let i = 0; i < j.locations.length; i++) {
+      const label = j.locations[i];
+      const cur = locByLabel.get(label) ?? { slug: j.locSlugs[i], count: 0 };
       cur.count++;
-      locByLabel.set(l, cur);
+      locByLabel.set(label, cur);
     }
   }
   const locSorted = [...locByLabel.entries()].sort((a, b) => b[1].count - a[1].count);
   const topLocs = locSorted.slice(0, 12);
-  const tailLocs = locSorted.slice(12).map(([label]) => label);
-
-  const slugFor: Record<string, string> = {};
-  const hrefFor: Record<string, string> = {};
-  for (const [label, { slug }] of locSorted) {
-    slugFor[label] = slug;
-    hrefFor[slug] = toggleHref(sp, 'loc', slug);
-  }
+  // Already-selected values live in the summary row, not the tail search.
+  const tailLocs = locSorted
+    .slice(12)
+    .filter(([, { slug }]) => !filters.locations.has(slug))
+    .map(([label]) => label);
 
   const showTerms = filters.type === 'internship';
 
@@ -129,7 +124,10 @@ export function FilterBar({
           />
         ))}
         {tailLocs.length > 0 && (
-          <LocationTypeahead options={tailLocs} slugFor={slugFor} hrefFor={hrefFor} />
+          <LocationTypeahead
+            options={tailLocs}
+            hrefTemplate={toggleHref(sp, 'loc', SLUG_PLACEHOLDER)}
+          />
         )}
       </fieldset>
     </div>

@@ -29,6 +29,26 @@ are (§7):
 npm run ingest:sources   # writes sources.verified.json
 ```
 
+## Company logos
+
+Every card leads with a company mark. By default that's a **monogram** derived
+from the name (`Jane Street` → `JS`, `TikTok` → `TT`, `IMC Trading` → `IMC`) —
+no network, nothing to lay out twice, works offline.
+
+To paint real logos over the monograms, point `LOGO_URL_TEMPLATE` at a logo host
+with a `{domain}` placeholder:
+
+```bash
+LOGO_URL_TEMPLATE='https://logo.example.com/{domain}' npm run dev
+```
+
+The employer domain is derived from the apply URL at ingest time
+(`lib/logo.ts`) — exact for company-owned hosts (`jobs.apple.com` → `apple.com`),
+a slug guess for ATS hosts (`jobs.lever.co/imc/…` → `imc.com`), and skipped for
+hosts that identify the ATS rather than the employer. Roughly 90% of companies
+resolve to a candidate domain. A logo that 404s or is blocked paints nothing and
+the monogram stays — the fallback is a CSS background layer, not client JS.
+
 ## How it maps to the design doc
 
 | Design doc | Where it lives |
@@ -44,6 +64,8 @@ npm run ingest:sources   # writes sources.verified.json
 | §3 — URL canonicalization by **allowlist**, not blocklist | `lib/canonical.ts` |
 | §4.2 — the token set, verbatim | `app/globals.css` |
 | §5.1 — JobCard: decay rail + redundant age text + one link/tab stop | `components/JobCard.tsx`, `lib/age.ts` |
+| §5.1 — company mark: monogram, logo layered over it when configured | `components/CompanyMark.tsx`, `lib/logo.ts` |
+| §5.1 — grid depth: 120-card window, `?n=` grows it, `content-visibility` below the fold | `app/page.tsx`, `lib/url.ts`, `app/globals.css` |
 | §5.2 — Chip with mandatory server-side counts, zero-count disabled | `components/Chip.tsx`, `lib/filter.ts` |
 | §5.3 — SystemBanner (stale / partial / empty), not dismissible | `components/SystemBanner.tsx` |
 | §5.4 — FilterBar, narrowest-to-widest, state in URL params | `components/FilterBar.tsx`, `lib/url.ts` |

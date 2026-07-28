@@ -4,30 +4,35 @@
 // long tail (383 distinct values) is reachable here. A datalist keeps it a thin
 // client island: pick a value, we navigate to the same URL-param filter the
 // chips use, so state stays in the query string.
+//
+// Props are deliberately two scalars. Passing label→slug and slug→href maps for
+// every tail location put ~40KB of duplicated strings in the RSC payload; the
+// slug is a pure function of the label, and every href is the same string with
+// the slug substituted, so we send the function's input and one template.
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { locSlug } from '@/lib/taxonomy';
+import { SLUG_PLACEHOLDER } from '@/lib/url';
 
 export function LocationTypeahead({
   options,
-  slugFor,
-  hrefFor,
+  hrefTemplate,
 }: {
   options: string[];
-  // map display string -> slug
-  slugFor: Record<string, string>;
-  // map slug -> toggle href
-  hrefFor: Record<string, string>;
+  // A toggle href for this facet with SLUG_PLACEHOLDER where the slug goes.
+  hrefTemplate: string;
 }) {
   const router = useRouter();
   const [value, setValue] = useState('');
 
   function go(v: string) {
-    const slug = slugFor[v];
-    if (slug && hrefFor[slug]) {
-      router.push(hrefFor[slug], { scroll: false });
-      setValue('');
-    }
+    const label = options.find((o) => o.toLowerCase() === v.trim().toLowerCase());
+    if (!label) return;
+    router.push(hrefTemplate.replace(SLUG_PLACEHOLDER, locSlug(label)), {
+      scroll: false,
+    });
+    setValue('');
   }
 
   return (
@@ -45,7 +50,8 @@ export function LocationTypeahead({
         }}
         onInput={(e) => {
           const v = (e.target as HTMLInputElement).value;
-          if (slugFor[v]) go(v); // fires when a datalist option is chosen
+          // Fires when a datalist option is chosen outright.
+          if (options.includes(v)) go(v);
         }}
       />
       <datalist id="loc-tail">

@@ -5,7 +5,7 @@
 import Link from 'next/link';
 import { getFeed } from '@/lib/ingest';
 import { parseFilters, applyFilters } from '@/lib/filter';
-import type { SP } from '@/lib/url';
+import { moreHref, parseShown, PAGE_SIZE, type SP } from '@/lib/url';
 import { FilterBar } from '@/components/FilterBar';
 import { JobCard } from '@/components/JobCard';
 import { SystemBanner } from '@/components/SystemBanner';
@@ -32,6 +32,12 @@ export default async function BoardPage({
   const filters = parseFilters(sp);
   const visible = applyFilters(jobs, filters);
   const showType = filters.type === 'unknown';
+
+  // Render a window, not the whole result set — the board is a scanning surface,
+  // and all 1.4k cards is ~3MB of markup. `n` grows it; filters reset it.
+  const shown = Math.min(parseShown(sp), visible.length);
+  const page = shown < visible.length ? visible.slice(0, shown) : visible;
+  const remaining = visible.length - page.length;
 
   return (
     <main className="shell">
@@ -82,11 +88,28 @@ export default async function BoardPage({
           typeLabel={TYPE_LABEL[filters.type]}
         />
       ) : (
-        <div className="grid">
-          {visible.map((job) => (
-            <JobCard key={job.id} job={job} now={now} showType={showType} />
-          ))}
-        </div>
+        <>
+          <div className="grid">
+            {page.map((job) => (
+              <JobCard key={job.id} job={job} now={now} showType={showType} />
+            ))}
+          </div>
+          {remaining > 0 && (
+            <div className="gridfoot">
+              <Link
+                className="showmore"
+                href={moreHref(sp, page.length)}
+                scroll={false}
+                prefetch={false}
+              >
+                Show {Math.min(PAGE_SIZE, remaining)} more
+              </Link>
+              <span className="eyebrow">
+                {page.length} of {visible.length} shown
+              </span>
+            </div>
+          )}
+        </>
       )}
     </main>
   );
