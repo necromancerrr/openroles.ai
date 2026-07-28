@@ -103,6 +103,28 @@ a { color: inherit; text-decoration: none; }
 fieldset { border: 0; margin: 0; padding: 0; display: contents; }
 legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
+/* Search — a plain GET form, so it needs no client JS (§5.4). */
+.search { display: flex; align-items: center; gap: var(--s-2); flex: 1; min-width: 220px; }
+.search__input {
+  flex: 1; min-width: 0; max-width: 420px;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-strong); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--ink);
+  font-family: var(--font-ui); font-size: var(--t-meta);
+}
+.search__input::placeholder { color: var(--ink-3); }
+.search__input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+.search__go {
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--rule-strong); border-radius: var(--r-sm);
+  background: transparent; color: var(--ink-2);
+  font-family: var(--font-data); font-size: var(--t-meta); cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.search__go:hover { border-color: var(--ink-2); background: var(--surface); }
+.search__clear { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-3); border-bottom: 1px solid var(--rule-strong); }
+.search__clear:hover { color: var(--ink-2); }
+
 /* Segmented control (Type) */
 .segmented { display: inline-flex; border: 1px solid var(--rule-strong); border-radius: var(--r-md); overflow: hidden; }
 .segmented a {
@@ -115,6 +137,13 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
 .segmented a:hover { background: var(--paper); }
 .segmented a[aria-current="true"] { background: var(--ink); color: var(--paper); }
 .segmented a .count { font-family: var(--font-data); font-size: var(--t-micro); opacity: 0.7; }
+
+/* Small variant — the density control in the grid header. */
+.segmented--sm a {
+  padding: 2px var(--s-2);
+  font-family: var(--font-data); font-size: var(--t-micro);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
 
 /* --- Chip --------------------------------------------------------------- */
 .chip {
@@ -143,16 +172,35 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
 
 /* --- Job grid ----------------------------------------------------------- */
 .gridhead {
-  display: flex; align-items: baseline; justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-3); flex-wrap: wrap;
   padding: var(--s-5) 0 var(--s-3);
 }
+.gridhead__right { display: flex; align-items: center; gap: var(--s-4); }
 .gridhead__count { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-3); }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+/* Cards are separated by rules, not shadows (§4.2). The rules come from a 1px
+   border on each card with the adjacent edge pulled back over its neighbour, so
+   shared edges collapse to a single hairline. The older trick — a rule-colored
+   grid background showing through 1px gaps — painted every *empty* cell in the
+   last row grey, which is glaring on a result set of one or two. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  overflow: hidden; /* contains the 1px the collapsing margins pull outward */
+}
+/* Compact drops the eyebrow (§5.1) and tightens the box; more rows per screen.
+   Its reserved height is the measured compact median (123px) less 24px padding. */
+.grid--compact .card {
+  padding: var(--s-3) var(--s-3) var(--s-3) var(--s-4);
+  contain-intrinsic-size: auto 99px;
+}
 
 /* --- JobCard (§5.1) ----------------------------------------------------- */
 .card {
-  position: relative; display: block; background: var(--surface);
+  position: relative; display: flex; background: var(--surface);
   padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5);
+  border: 1px solid var(--rule);
+  margin: 0 -1px -1px 0; /* collapse shared edges to one hairline */
   transition: background var(--dur-fast) var(--ease);
   /* The board is long. Let the browser skip layout and paint for cards below
      the fold — worth ~40% of load time once the window is a few hundred cards
@@ -182,6 +230,11 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
 .card--unclassified::before { background: repeating-linear-gradient(var(--ink-3) 0 4px, transparent 4px 8px); }
 .card--inactive { opacity: 0.6; }
 .card--inactive::before { background: var(--age-4); }
+
+/* Grid rows stretch to their tallest card, so the card body is a column and the
+   meta row is pushed to the bottom of it. Without this the age column lands at a
+   different height in every card and the row reads as ragged. */
+.card > article { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 
 .card__eyebrow { margin-bottom: var(--s-2); display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
 
@@ -218,6 +271,7 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
   line-height: 1.3;
 }
 .card__foot {
+  margin-top: auto; /* pins the meta row to the bottom of a stretched card */
   display: flex; align-items: center; justify-content: space-between; gap: var(--s-3);
   font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-3);
 }
@@ -249,8 +303,11 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
 .showmore:hover { border-color: var(--ink-2); background: var(--surface); }
 .showmore:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-/* Skeleton (loading) */
-.skeleton { background: var(--surface); padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5); position: relative; }
+/* Skeleton (loading) — same box and rule collapsing as a real card. */
+.skeleton {
+  background: var(--surface); padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5);
+  position: relative; border: 1px solid var(--rule); margin: 0 -1px -1px 0;
+}
 .skeleton::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: var(--rail-w); background: var(--age-4); }
 .skeleton .bar { height: 12px; background: var(--rule); border-radius: 2px; margin-bottom: var(--s-3); }
 
@@ -280,3 +337,16 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
 
 .backlink { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-3); }
 .backlink:hover { color: var(--ink-2); }
+
+/* --- Narrow screens ----------------------------------------------------- */
+/* The 84px label column leaves room for exactly one chip beside the label and
+   then wraps the rest, which reads as a staircase. Below this width the label
+   takes its own line and the chips flow as one block. */
+@media (max-width: 40rem) {
+  .filterrow { gap: var(--s-2); margin-bottom: var(--s-5); }
+  .filterrow__label { width: 100%; }
+  .search { width: 100%; }
+  .search__input { max-width: none; }
+  .gridhead { align-items: flex-start; }
+  .gridhead__right { width: 100%; justify-content: space-between; }
+}

@@ -69,6 +69,8 @@ the monogram stays — the fallback is a CSS background layer, not client JS.
 | §5.2 — Chip with mandatory server-side counts, zero-count disabled | `components/Chip.tsx`, `lib/filter.ts` |
 | §5.3 — SystemBanner (stale / partial / empty), not dismissible | `components/SystemBanner.tsx` |
 | §5.4 — FilterBar, narrowest-to-widest, state in URL params | `components/FilterBar.tsx`, `lib/url.ts` |
+| §5.4 — search as a plain GET form (no client island), Remote-only chip, density control | `components/SearchBox.tsx`, `components/FilterBar.tsx`, `app/page.tsx` |
+| §5.1 — skeleton shown only when the feed is cold, never on a warm 30ms render | `components/BoardSkeleton.tsx`, `lib/ingest.ts` (`isFeedFresh`) |
 | §5.5 — EmptyState names the specific filters | `components/EmptyState.tsx` |
 | §5.6 — StatusPage reads fetch runs | `app/status/page.tsx` |
 

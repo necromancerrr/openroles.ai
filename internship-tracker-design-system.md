@@ -357,6 +357,18 @@ and it earns no meaning in the system — age is still the only variable that ge
 | Pressed | translateY(1px) | — |
 | Loading | skeleton: three rules at 40%/70%/55% width, no shimmer | `aria-busy="true"` |
 
+**Where the skeleton actually shows.** It's the Suspense fallback for the board, applied
+*only* when the feed isn't already in memory — a cold request has ~23MB of source JSON to
+download and would otherwise paint a blank tab, while a warm one answers in ~30ms and must
+render in a single flush. React streams a fallback even when the child resolves in
+milliseconds, so making the boundary unconditional would flash a skeleton on every filter
+click. A loading state that appears when there is no wait is worse than none.
+
+**Card separation.** Cards carry a 1px `--rule` border with the trailing edge pulled back
+1px over the neighbour, so shared edges collapse to a single hairline. Don't reach for the
+usual trick of a rule-colored grid background showing through 1px gaps: it also paints the
+*empty* cells of the last row, so a result set of one renders a card beside a grey slab.
+
 **Age encoding — and its redundancy requirement.** The rail is decorative reinforcement,
 never the sole carrier. Age is *always* also present as text (`3h ago`) in `--font-data`,
 and the `<time>` element carries a machine-readable `datetime`. A colorblind or
@@ -445,14 +457,25 @@ Copy rule: state what happened and what it means for the data on screen. No apol
 Filters live in URL search params (`/?type=internship&term=summer_2026&loc=seattle-wa`)
 so the page stays a Server Component, links are shareable, and back/forward works.
 
-Order, top to bottom — narrowest-to-widest by how often it's used:
+Order, top to bottom — widest net first, then narrowest-to-widest by how often it's used:
+0. **Search** — free text over company + title, every word required (AND)
 1. **Type** — segmented: Internships · New grad · Unclassified
 2. **Term** — chips, internships only (the new-grad repo has no `terms`, so this row disappears entirely for that tab rather than rendering disabled)
 3. **Category** — chips, six canonical values
-4. **Location** — top ~12 chips + type-ahead for the tail
+4. **Location** — a `Remote only` chip on the derived `isRemote` flag, then top ~12 location chips + type-ahead for the tail
 
 Active filters render as removable chips in a summary row with one **Clear all**. That row
-is also what the empty state points at.
+is also what the empty state points at, and the empty state quotes the query back.
+
+**Search is a plain GET `<form action="/">`.** Submitting navigates to `/?q=…`, which keeps
+search on exactly the same footing as every other filter — server-rendered, shareable, no
+client island, no debounce to tune. Every other active param rides along as a hidden input.
+It counts like a filter, too: a query narrows the facet counts, and chips it zeroes out go
+disabled (§5.2) rather than lying.
+
+**Density.** `comfortable | compact` is a two-item segmented control in the grid header, not
+a filter — it changes presentation only, so it is the one control that does *not* reset the
+`?n=` window a reader has scrolled open.
 
 ### 5.5 EmptyState
 

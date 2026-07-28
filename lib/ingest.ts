@@ -70,6 +70,7 @@ function toJob(raw: RawListing, type: JobType): Job {
     isRemote: deriveRemote(locations),
     initials: markInitials(raw.company_name),
     logoUrl: logoSrc(logoDomain(raw.url)),
+    search: `${raw.company_name} ${raw.title}`.toLowerCase(),
     datePosted: raw.date_posted,
     firstSeenAt: raw.date_posted, // approximation; a persisted DB stores our own first-fetch
     active: raw.active,
@@ -89,6 +90,13 @@ async function fetchSource(url: string): Promise<RawListing[]> {
 let cached: Feed | null = null;
 let cachedAt = 0;
 const TTL_MS = 60 * 60 * 1000;
+
+// Is the feed already in memory? Callers use this to decide whether rendering
+// will actually block: a warm request resolves in microseconds and must not be
+// put behind a loading state, a cold one has ~23MB to download first.
+export function isFeedFresh(): boolean {
+  return cached !== null && Date.now() - cachedAt < TTL_MS;
+}
 
 export async function getFeed(): Promise<Feed> {
   if (cached && Date.now() - cachedAt < TTL_MS) return cached;

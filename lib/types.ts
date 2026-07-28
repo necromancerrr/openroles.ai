@@ -65,6 +65,9 @@ export interface Job {
   // Company mark (§5.1). Resolved once at ingest — see lib/logo.ts.
   initials: string;
   logoUrl?: string;
+  // Lowercased `company + title`, the haystack for the search box. Built once at
+  // ingest so a keystroke doesn't re-lowercase 4k strings five times over.
+  search: string;
   // Unix seconds. `firstSeenAt` drives the decay rail (§4.1). In a persisted
   // system this is "our first fetch"; here we approximate with date_posted.
   datePosted: number;
