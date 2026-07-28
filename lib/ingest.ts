@@ -30,6 +30,23 @@ const SOURCES: { url: string; type: JobType; name: string }[] = [
     type: 'new_grad',
     url: 'https://raw.githubusercontent.com/SimplifyJobs/New-Grad-Positions/dev/.github/scripts/listings.json',
   },
+  // A second internship aggregator, same schema and same dedup key. Measured
+  // against the SimplifyJobs feed: 235 active rows, 210 of them not present
+  // there, and 40% of those posted inside 7 days versus 9% for SimplifyJobs —
+  // it's a genuine freshness gain at the head of the board, which is the thing
+  // this surface exists to show.
+  //
+  // Two quirks, both handled by not pretending otherwise: rows carry no
+  // `category` (so they normalize to `other` and can't be category-filtered),
+  // and `season` is bare — "Summer", "Fall", no year. A year is not inferable
+  // from the repo name either, since these repos carry off-season rows (§2.2),
+  // so the season is left unmapped and the rows read `unspecified` rather than
+  // being assigned a term nobody stated.
+  {
+    name: 'vanshb03/Summer2026-Internships',
+    type: 'internship',
+    url: 'https://raw.githubusercontent.com/vanshb03/Summer2026-Internships/dev/.github/scripts/listings.json',
+  },
 ];
 
 export interface SourceRun {

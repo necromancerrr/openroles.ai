@@ -34,6 +34,10 @@ export interface RawListing {
   title: string;
   active: boolean;
   terms?: string[];
+  // vanshb03's feed carries a bare season ("Summer", "Fall") with no year.
+  // Declared so it's clear we see it and deliberately don't map it — see the
+  // note on that source in ingest.ts.
+  season?: string;
   date_updated: number;
   date_posted: number;
   url: string;

@@ -6,9 +6,31 @@ time pressure: the subject isn't "jobs," it's *windows closing*. So **age is the
 primary visual variable, and it's the only thing in the interface that gets
 color** — the decay rail on each card's leading edge.
 
-The app ingests the two live SimplifyJobs aggregator feeds, normalizes them into
-one canonical taxonomy, and renders the board as a Server Component with all
-filter state in the URL.
+The app ingests three live aggregator feeds, normalizes them into one canonical
+taxonomy, dedups by canonical URL, and renders the board as a Server Component
+with all filter state in the URL.
+
+| Source | Type | Active | Inserted after dedup |
+|---|---|---|---|
+| `SimplifyJobs/Summer2026-Internships` | internship | 1,406 | 1,406 |
+| `SimplifyJobs/New-Grad-Positions` | new grad | 2,842 | 2,841 |
+| `vanshb03/Summer2026-Internships` | internship | 235 | 208 |
+
+The third feed was added because it measurably differs rather than duplicates:
+210 of its 235 active rows aren't in the SimplifyJobs internship feed, and 40%
+of those were posted inside 7 days against 9% for SimplifyJobs — a freshness gain
+at the head of the board, which is the thing this surface exists to show. It also
+has a staler tail (19% older than 6 months vs 7%), which the decay rail handles
+on its own: those rows sort to the bottom and read as unrailed.
+
+Its two schema gaps are surfaced rather than papered over. Rows carry no
+`category`, so they normalize to `Other` and can't be category-filtered. And
+`season` is bare — `"Summer"`, `"Fall"`, no year — which isn't inferable from the
+repo name either, since these repos carry off-season rows (§2.2), so those rows
+read `Unspecified` instead of being assigned a term nobody stated.
+
+`/status` reports fetched / active / inserted per source, so a feed going quiet is
+visible rather than silently missing.
 
 ## Run it
 

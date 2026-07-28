@@ -2,7 +2,7 @@
   "name": "openroles",
   "version": "0.1.0",
   "private": true,
-  "description": "Internship & new-grad tracker \u2014 the Ledger design system. A scanning surface where age is the only thing that gets color.",
+  "description": "Internship & new-grad tracker — the Ledger design system. A scanning surface where age is the only thing that gets color.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
