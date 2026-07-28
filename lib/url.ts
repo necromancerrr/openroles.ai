@@ -22,7 +22,15 @@ function build(sp: SP): string {
   return s ? `/?${s}` : '/';
 }
 
+// Stand-in for a value the client fills in — the location type-ahead builds one
+// href template server-side and substitutes the slug on selection. It lives here
+// rather than in the client component: anything exported from a 'use client'
+// module reaches the server as a reference stub, not as its value.
+export const SLUG_PLACEHOLDER = '__slug__';
+
 // Toggle a value inside a multi-value facet, returning the resulting href.
+// Changing a filter resets paging — `n` is a position in one result set, and it
+// means nothing in the next one.
 export function toggleHref(sp: SP, key: string, value: string): string {
   const cur = get(sp, key);
   const next = cur.includes(value)
@@ -31,6 +39,7 @@ export function toggleHref(sp: SP, key: string, value: string): string {
   const copy: SP = { ...sp };
   if (next.length) copy[key] = next.join(',');
   else delete copy[key];
+  delete copy.n;
   return build(copy);
 }
 
@@ -39,7 +48,28 @@ export function toggleHref(sp: SP, key: string, value: string): string {
 export function setTypeHref(sp: SP, value: string): string {
   const copy: SP = { ...sp, type: value };
   delete copy.term;
+  delete copy.n;
   return build(copy);
+}
+
+// --- Paging (`n` = how many cards to render) ------------------------------
+// The board is 1.4k+ postings deep. Rendering all of them costs megabytes of
+// markup and RSC payload for a surface nobody scrolls past the first screen of,
+// so the page renders a window and grows it on request. Server-rendered, in the
+// URL, no client state — same contract as the filters.
+export const PAGE_SIZE = 120;
+const MAX_SHOWN = 5000;
+
+export function parseShown(sp: SP): number {
+  const raw = Array.isArray(sp.n) ? sp.n[0] : sp.n;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= PAGE_SIZE) return PAGE_SIZE;
+  // Snap to a page boundary so hand-edited values can't produce odd windows.
+  return Math.min(Math.ceil(n / PAGE_SIZE) * PAGE_SIZE, MAX_SHOWN);
+}
+
+export function moreHref(sp: SP, shown: number): string {
+  return build({ ...sp, n: String(shown + PAGE_SIZE) });
 }
 
 // Remove one value from a facet (active-filter pills).

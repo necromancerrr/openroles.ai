@@ -154,7 +154,22 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
   position: relative; display: block; background: var(--surface);
   padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5);
   transition: background var(--dur-fast) var(--ease);
+  /* The board is long. Let the browser skip layout and paint for cards below
+     the fold — worth ~40% of load time once the window is a few hundred cards
+     deep. The placeholder size is the measured median card height at every
+     breakpoint, so the scrollbar barely lies before those cards render. */
+  content-visibility: auto;
+  /* Content-box height: the 155px median card, less its 32px of padding. */
+  contain-intrinsic-size: auto 123px;
 }
+
+/* Decay rail token, resolved from the age bucket in CSS so the markup carries
+   one short attribute instead of an inline custom property (§4.1). */
+.card[data-age="0"] { --rail-color: var(--age-0); }
+.card[data-age="1"] { --rail-color: var(--age-1); }
+.card[data-age="2"] { --rail-color: var(--age-2); }
+.card[data-age="3"] { --rail-color: var(--age-3); }
+.card[data-age="4"] { --rail-color: var(--age-4); }
 .card::before {
   content: ""; position: absolute; left: 0; top: 0; bottom: 0;
   width: var(--rail-w); background: var(--rail-color, var(--age-4));
@@ -169,6 +184,33 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
 .card--inactive::before { background: var(--age-4); }
 
 .card__eyebrow { margin-bottom: var(--s-2); display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
+
+/* Company mark — a 28px identity square left of the name. Neutral by rule:
+   age is the only thing that gets color (§4.2). */
+.card__head { display: flex; align-items: flex-start; gap: var(--s-3); }
+.card__headtext { min-width: 0; flex: 1; }
+.mark {
+  position: relative; flex: none;
+  width: 28px; height: 28px; margin-top: 1px;
+  border: 1px solid var(--rule); border-radius: var(--r-sm);
+  background: var(--paper); overflow: hidden;
+}
+.mark__mono {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-data); font-size: var(--t-micro);
+  letter-spacing: 0.02em; font-weight: 500; color: var(--ink-2);
+}
+/* Sits over the monogram. A background image that fails to load paints nothing,
+   so the monogram is the fallback with no JS in the loop. */
+.mark__img {
+  position: absolute; inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+}
+.card--inactive .mark { filter: grayscale(1); }
+
 .card__company { font-size: var(--t-body); font-weight: 600; color: var(--ink); }
 .card__title {
   font-size: var(--t-title); color: var(--ink); margin: var(--s-1) 0 var(--s-3);
@@ -191,6 +233,21 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
   font-family: var(--font-data); font-size: var(--t-micro);
   color: var(--ink-3); border: 1px solid var(--rule-strong); border-radius: 2px; padding: 0 4px;
 }
+
+/* --- Grid footer / paging ----------------------------------------------- */
+.gridfoot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-4); flex-wrap: wrap; padding: var(--s-4) 0 0;
+}
+.showmore {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--rule-strong); border-radius: var(--r-sm);
+  font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-2);
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.showmore:hover { border-color: var(--ink-2); background: var(--surface); }
+.showmore:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* Skeleton (loading) */
 .skeleton { background: var(--surface); padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5); position: relative; }

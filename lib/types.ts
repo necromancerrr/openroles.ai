@@ -57,7 +57,14 @@ export interface Job {
   typeConf: TypeConf;
   terms: Term[];
   locations: string[];
+  // Slugs for `locations`, index-aligned. Precomputed at ingest: the location
+  // facet is scanned five times per request (once to filter, four times to
+  // count) and slugging 1.4k × N locations per pass is pure waste.
+  locSlugs: string[];
   isRemote: boolean;
+  // Company mark (§5.1). Resolved once at ingest — see lib/logo.ts.
+  initials: string;
+  logoUrl?: string;
   // Unix seconds. `firstSeenAt` drives the decay rail (§4.1). In a persisted
   // system this is "our first fetch"; here we approximate with date_posted.
   datePosted: number;

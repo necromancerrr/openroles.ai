@@ -319,11 +319,19 @@ The primary unit. Everything else exists to support it.
 **Anatomy** (leading edge → trailing):
 ```
 │▌│ EYEBROW · category · term            │
-│▌│ Company                              │
-│▌│ Job Title, wrapping to two lines max │
+│▌│ ▣  Company                           │
+│▌│    Job Title, wrapping to 2 lines    │
 │▌│ Seattle, WA  +2   ·   3h ago         │
-└─rail
+└─rail  └─ company mark
 ```
+
+**Company mark.** A 28px square at the head of the card, so the grid can be scanned by
+shape as well as by text. It is a **monogram by default** — `--ink-2` on `--paper`, in
+`--font-data`, following whatever break the name itself offers (`Jane Street` → `JS`,
+`TikTok` → `TT`, `IMC Trading` → `IMC`, `Google` → `G`). The real logo, when a deployment
+configures a logo host, paints over the monogram; if it fails to load the monogram is what
+remains. Never colored by the app: a vendor's logo is the one chromatic thing allowed in,
+and it earns no meaning in the system — age is still the only variable that gets color.
 
 | Property | Type | Default | Description |
 |---|---|---|---|
@@ -380,6 +388,13 @@ dominate the grid.
 | Lead with company — it's what people filter on mentally | Put a description snippet on the card; every feed opens with boilerplate |
 | Keep title to two lines with `line-clamp` | Let a 90-character title reflow the grid |
 | Use `--font-data` for the age | Use color alone to signal freshness |
+| Give the mark a fixed box so a late logo can't reflow the grid | Ship a logo `<img>` with no fallback — a broken one draws the browser's broken-image icon |
+
+**Grid depth.** The board is 1.4k+ postings deep and the result set is a scanning surface,
+not an archive: render a window of 120 cards and grow it in place via `?n=` (server-rendered,
+in the URL, reset whenever a filter changes). Cards below the fold are
+`content-visibility: auto` with the median card height reserved, so the browser skips their
+layout and paint — and skips fetching their logos — until they scroll in.
 
 ### 5.2 Chip (filter control)
 

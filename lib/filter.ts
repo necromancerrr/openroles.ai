@@ -4,7 +4,6 @@
 // leading to zero results is disabled before it can be clicked.
 
 import type { Category, Job, JobType, Term } from './types';
-import { locSlug } from './taxonomy';
 
 export interface Filters {
   type: JobType; // segmented control — always exactly one
@@ -45,7 +44,7 @@ function matches(job: Job, f: Filters, except?: 'type' | 'term' | 'category' | '
   if (
     except !== 'location' &&
     f.locations.size > 0 &&
-    !job.locations.some((l) => f.locations.has(locSlug(l)))
+    !job.locSlugs.some((s) => f.locations.has(s))
   )
     return false;
   return true;

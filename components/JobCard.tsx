@@ -3,7 +3,8 @@
 
 import type { Job } from '@/lib/types';
 import { CATEGORY_LABELS, TERM_LABELS } from '@/lib/taxonomy';
-import { ageBucket, ageText, isNew, isoDate, RAIL_TOKEN } from '@/lib/age';
+import { ageBucket, ageText, isNew, isoDate } from '@/lib/age';
+import { CompanyMark } from './CompanyMark';
 
 export function JobCard({
   job,
@@ -17,7 +18,6 @@ export function JobCard({
   showType?: boolean;
 }) {
   const bucket = ageBucket(job.firstSeenAt, now);
-  const railColor = job.active ? RAIL_TOKEN[bucket] : RAIL_TOKEN[4];
   const unclassified = job.type === 'unknown';
 
   const [firstLoc, ...rest] = job.locations;
@@ -36,13 +36,15 @@ export function JobCard({
     moreCount ? ` and ${moreCount} more` : ''
   }, posted ${ageText(job.firstSeenAt, now)}, link.`;
 
+  // The rail token comes off `data-age` in CSS rather than an inline custom
+  // property: one stylesheet rule instead of a style attribute per card.
   return (
     <a
       className={cls}
       href={job.url}
       target="_blank"
       rel="noopener noreferrer"
-      style={{ ['--rail-color' as string]: railColor }}
+      data-age={bucket}
       aria-label={srLabel}
     >
       <article>
@@ -60,12 +62,17 @@ export function JobCard({
           </div>
         )}
 
-        <div className="card__company" aria-hidden>
-          {job.company}
+        <div className="card__head">
+          <CompanyMark initials={job.initials} logoUrl={job.logoUrl} />
+          <div className="card__headtext">
+            <div className="card__company" aria-hidden>
+              {job.company}
+            </div>
+            <h3 className="card__title" aria-hidden>
+              {job.title}
+            </h3>
+          </div>
         </div>
-        <h3 className="card__title" aria-hidden>
-          {job.title}
-        </h3>
 
         <div className="card__foot">
           <span className="card__loc" aria-hidden>

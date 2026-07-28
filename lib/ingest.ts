@@ -13,8 +13,10 @@ import {
   normalizeTerms,
   deriveRemote,
   unseenCategories,
+  locSlug,
 } from './taxonomy';
 import { canonicalKey, hostBucket } from './canonical';
+import { logoDomain, logoSrc, markInitials } from './logo';
 import { SAMPLE_LISTINGS } from './sample-data';
 
 const SOURCES: { url: string; type: JobType; name: string }[] = [
@@ -64,7 +66,10 @@ function toJob(raw: RawListing, type: JobType): Job {
     typeConf: 'source',
     terms: normalizeTerms(raw.terms),
     locations,
+    locSlugs: locations.map(locSlug),
     isRemote: deriveRemote(locations),
+    initials: markInitials(raw.company_name),
+    logoUrl: logoSrc(logoDomain(raw.url)),
     datePosted: raw.date_posted,
     firstSeenAt: raw.date_posted, // approximation; a persisted DB stores our own first-fetch
     active: raw.active,

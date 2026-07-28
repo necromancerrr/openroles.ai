@@ -16,13 +16,10 @@ export function ageBucket(firstSeenAt: number, now: number): AgeBucket {
   return 4;
 }
 
-export const RAIL_TOKEN: Record<AgeBucket, string> = {
-  0: 'var(--age-0)',
-  1: 'var(--age-1)',
-  2: 'var(--age-2)',
-  3: 'var(--age-3)',
-  4: 'var(--age-4)',
-};
+// The bucket → `--age-N` token mapping lives in one place: the
+// `.card[data-age="…"]` rules in globals.css. Cards emit the bucket as an
+// attribute rather than an inline custom property, so nothing here needs to
+// know about color.
 
 // `NEW` micro-label only for buckets 0 and 1 (< 24h).
 export function isNew(bucket: AgeBucket): boolean {
