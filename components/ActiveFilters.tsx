@@ -3,8 +3,8 @@
 
 import Link from 'next/link';
 import type { Filters } from '@/lib/filter';
-import { CATEGORY_LABELS, TERM_LABELS } from '@/lib/taxonomy';
-import type { Category, Term } from '@/lib/types';
+import { CATEGORY_LABELS, termLabel } from '@/lib/taxonomy';
+import type { Category } from '@/lib/types';
 import {
   removeHref,
   clearQueryHref,
@@ -25,7 +25,7 @@ export function ActiveFilterPills({ filters, sp }: { filters: Filters; sp: SP })
   for (const t of filters.terms)
     pills.push({
       id: `term:${t}`,
-      label: TERM_LABELS[t as Term],
+      label: termLabel(t),
       href: removeHref(sp, 'term', t),
     });
   for (const c of filters.categories)

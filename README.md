@@ -125,7 +125,7 @@ its percentage isn't one this harness can confirm.
 | §1 finding 5 — internship classifier only, never a new-grad one | `lib/classify.ts` (type comes from repo-of-origin here) |
 | addendum §5 — eval harness on the labeled feeds, recorded and re-runnable | `scripts/eval-classifier.ts`, `eval/type-classifier.json` |
 | §2.1 — normalize `category`, **fail loudly** on unseen values | `lib/taxonomy.ts` (`unseenCategories`) |
-| §2.2 — `terms` filter, the repo isn't summer-only | `lib/taxonomy.ts`, FilterBar term row |
+| §2.2 — `terms` parsed not table-mapped, ordered by start date, open terms first | `lib/taxonomy.ts` (`parseTerm`, `termChipOrder`, `primaryTerm`) |
 | §2.3 — drop `sponsorship`/`degrees` from the UI | not surfaced |
 | §2.4 — adopt Simplify's location vocabulary; chips + type-ahead | `components/FilterBar.tsx`, `LocationTypeahead.tsx` |
 | §2.5 — canonical enums | `lib/types.ts` |
