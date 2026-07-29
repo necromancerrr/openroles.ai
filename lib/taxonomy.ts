@@ -2,7 +2,7 @@
 // under multiple names; we normalize on ingest and FAIL LOUDLY on anything
 // unseen (§2.1) so a new category surfaces in logs instead of vanishing.
 
-import type { Category, Term } from './types';
+import type { Category, Season, Term } from './types';
 
 // §2.1 — five duplicate pairs. Long forms are un-migrated legacy rows.
 const CATEGORY_MAP: Record<string, Category> = {
@@ -53,43 +53,121 @@ export function normalizeCategory(raw: string | undefined): Category {
   return mapped;
 }
 
-// §2.2 — the repo is not summer-only. `terms` is an array; map each entry.
-const TERM_MAP: Record<string, Term> = {
-  'summer 2026': 'summer_2026',
-  'fall 2026': 'fall_2026',
-  'spring 2026': 'spring_2026',
-  'winter 2026': 'winter_2026',
-  'winter 2025': 'winter_2026', // both winters collapse to the nearest season
-  'summer 2027': 'summer_2027',
-  'n/a': 'unspecified',
+// §2.2 — the repo is not summer-only, and it isn't 2026-only either. `terms` is
+// an array of "{Season} {Year}" strings, parsed rather than looked up in a table
+// so the vocabulary never needs an annual edit.
+
+const SEASONS: Season[] = ['spring', 'summer', 'fall', 'winter'];
+
+// The month a term begins, by convention: the year in the label is the calendar
+// year the term STARTS in, so winter 2026 runs from December 2026. That single
+// rule is what makes terms orderable and what decides whether one is still open
+// to apply to.
+const SEASON_START_MONTH: Record<Season, number> = {
+  spring: 0, // January
+  summer: 4, // May
+  fall: 8, // September
+  winter: 11, // December
 };
 
-export const TERM_LABELS: Record<Term, string> = {
-  summer_2026: 'Summer 2026',
-  fall_2026: 'Fall 2026',
-  spring_2026: 'Spring 2026',
-  winter_2026: 'Winter 2026',
-  summer_2027: 'Summer 2027',
-  unspecified: 'Unspecified',
-};
+// Term strings the parser didn't recognize. Ingest logs these loudly (§2.1) —
+// the previous table-lookup version dropped anything it hadn't been told about
+// into `unspecified` in silence, which is how 13 real terms went missing.
+export const unseenTerms = new Set<string>();
 
-export const TERM_ORDER: Term[] = [
-  'summer_2026',
-  'fall_2026',
-  'spring_2026',
-  'winter_2026',
-  'summer_2027',
-  'unspecified',
-];
+const TERM_RE = /^(spring|summer|fall|winter)\s+(\d{4})$/i;
+
+export function parseTerm(raw: string): Term | null {
+  const t = raw.trim().toLowerCase();
+  if (t === 'n/a' || t === '' || t === 'unspecified') return 'unspecified';
+  const m = TERM_RE.exec(t);
+  if (!m) return null;
+  return `${m[1] as Season}_${Number(m[2])}`;
+}
+
+function split(term: Term): { season: Season; year: number } | null {
+  if (term === 'unspecified') return null;
+  const i = term.lastIndexOf('_');
+  const season = term.slice(0, i) as Season;
+  const year = Number(term.slice(i + 1));
+  if (!SEASONS.includes(season) || !Number.isFinite(year)) return null;
+  return { season, year };
+}
+
+export function termLabel(term: Term): string {
+  const p = split(term);
+  if (!p) return 'Unspecified';
+  return `${p.season[0].toUpperCase()}${p.season.slice(1)} ${p.year}`;
+}
+
+// Months since year 0 — a total order over terms. `unspecified` sorts last.
+export function termSortKey(term: Term): number {
+  const p = split(term);
+  if (!p) return Number.MAX_SAFE_INTEGER;
+  return p.year * 12 + SEASON_START_MONTH[p.season];
+}
+
+// You apply to a term before it starts, so "open" means the start month is still
+// ahead. Everything else has either begun or finished.
+export function isTermOpen(term: Term, now: Date): boolean {
+  const p = split(term);
+  if (!p) return false;
+  return termSortKey(term) > now.getFullYear() * 12 + now.getMonth();
+}
 
 export function normalizeTerms(raw: string[] | undefined): Term[] {
   if (!raw || raw.length === 0) return ['unspecified'];
   const out = new Set<Term>();
   for (const t of raw) {
-    const mapped = TERM_MAP[t.trim().toLowerCase()];
-    out.add(mapped ?? 'unspecified');
+    const parsed = parseTerm(t);
+    if (parsed === null) unseenTerms.add(t);
+    out.add(parsed ?? 'unspecified');
   }
   return [...out];
+}
+
+// The chip row for the Term facet: every term still open to apply to, soonest
+// first, then the term running right now, then Unspecified. Terms whose window
+// has closed get no chip — a board about windows closing shouldn't lead with one
+// that already has. They stay on the board and stay reachable by URL, and a
+// selected one keeps its chip so a shared link never loses a control.
+export function termChipOrder(
+  present: Iterable<Term>,
+  now: Date,
+  selected: ReadonlySet<Term> = new Set(),
+): Term[] {
+  const terms = [...new Set(present)];
+  const open = terms.filter((t) => isTermOpen(t, now));
+  const running = terms.filter(
+    (t) => !isTermOpen(t, now) && t !== 'unspecified' && selectedOrCurrent(t, now, selected),
+  );
+  const byStart = (a: Term, b: Term) => termSortKey(a) - termSortKey(b);
+  const tail: Term[] = terms.includes('unspecified') ? ['unspecified'] : [];
+  return [...open.sort(byStart), ...running.sort(byStart), ...tail];
+}
+
+// A closed term earns a chip only if it's the one currently running, or if the
+// reader already has it selected.
+function selectedOrCurrent(term: Term, now: Date, selected: ReadonlySet<Term>): boolean {
+  if (selected.has(term)) return true;
+  const p = split(term);
+  if (!p) return false;
+  // Currently running: started at or before this month, and the next term's
+  // start is still ahead.
+  const nowKey = now.getFullYear() * 12 + now.getMonth();
+  const start = termSortKey(term);
+  return start <= nowKey && nowKey - start < 4;
+}
+
+// The one term a card shows (§5.1 keeps the eyebrow to a single value): the
+// soonest one still open, so a posting tagged both Summer 2026 and Fall 2026
+// reads as the term you can still apply to. Falls back to the latest term.
+export function primaryTerm(terms: Term[], now: Date): Term | null {
+  const dated = terms.filter((t) => t !== 'unspecified');
+  if (dated.length === 0) return null;
+  const open = dated.filter((t) => isTermOpen(t, now)).sort((a, b) => termSortKey(a) - termSortKey(b));
+  if (open.length > 0) return open[0];
+  return dated.sort((a, b) => termSortKey(b) - termSortKey(a))[0];
 }
 
 // §2.4 — Simplify already normalizes location into a compact vocabulary.

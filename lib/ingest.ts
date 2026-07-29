@@ -13,6 +13,7 @@ import {
   normalizeTerms,
   deriveRemote,
   unseenCategories,
+  unseenTerms,
   locSlug,
 } from './taxonomy';
 import { canonicalKey, hostBucket } from './canonical';
@@ -181,6 +182,15 @@ export async function getFeed(): Promise<Feed> {
     console.warn(
       '[ingest] unseen category values (mapped to `other`):',
       [...unseenCategories],
+    );
+  }
+
+  if (unseenTerms.size > 0) {
+    // Same rule for terms. The parser handles any "{Season} {Year}", so anything
+    // landing here is a genuinely new shape worth seeing rather than absorbing.
+    console.warn(
+      '[ingest] unparsed term values (mapped to `unspecified`):',
+      [...unseenTerms],
     );
   }
 

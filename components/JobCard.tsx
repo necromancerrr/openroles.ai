@@ -2,7 +2,7 @@
 // An <a> wrapping an <article>: one link, one tab stop. Never a <div onClick>.
 
 import type { Job } from '@/lib/types';
-import { CATEGORY_LABELS, TERM_LABELS } from '@/lib/taxonomy';
+import { CATEGORY_LABELS, primaryTerm, termLabel } from '@/lib/taxonomy';
 import { ageBucket, ageText, isNew, isoDate } from '@/lib/age';
 import { CompanyMark } from './CompanyMark';
 
@@ -19,6 +19,9 @@ export function JobCard({
 }) {
   const bucket = ageBucket(job.firstSeenAt, now);
   const unclassified = job.type === 'unknown';
+  // The soonest term still open to apply to, not whichever the source listed
+  // first — a Summer 2026 / Fall 2026 posting reads Fall 2026 once summer starts.
+  const term = primaryTerm(job.terms, new Date(now * 1000));
 
   const [firstLoc, ...rest] = job.locations;
   const moreCount = rest.length;
@@ -53,8 +56,8 @@ export function JobCard({
             <span className="eyebrow">
               {unclassified ? 'UNCLASSIFIED' : CATEGORY_LABELS[job.category]}
             </span>
-            {!unclassified && job.terms[0] !== 'unspecified' && (
-              <span className="eyebrow">· {TERM_LABELS[job.terms[0]]}</span>
+            {!unclassified && term && (
+              <span className="eyebrow">· {termLabel(term)}</span>
             )}
             {showType && (
               <span className="eyebrow">· {job.type.replace('_', ' ')}</span>

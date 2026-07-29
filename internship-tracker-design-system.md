@@ -149,6 +149,26 @@ Despite being called `Summer2026-Internships`, roughly a third of rows are off-s
 `terms` is an array. Store it as `text[]` and expose it as a filter — this is the single
 most useful filter on the board and neither the v1 spec nor v2 has it.
 
+**Parse terms, never table-map them.** The table above is a snapshot, and a vocabulary
+built from a snapshot goes stale the moment the calendar moves. Measured against the live
+feed on 2026-07-28, a fixed 2026-era map was silently collapsing **135 term-mentions across
+13 values** — Fall 2027, Winter 2027, Spring 2027, Spring 2028, Summer 2028 among them —
+into `unspecified`, so postings for those terms could not be filtered for at all. Any
+`{Season} {Year}` parses; anything else is recorded in `unseenTerms` and logged (§2.1),
+the same contract categories already have.
+
+**Terms are ordered, and the order is the point.** The year in a term is the calendar year
+it *starts* in — winter 2026 begins December 2026 — which gives every term a sort key and
+makes "is this still open to apply to?" answerable. The Term chip row shows terms still
+open, soonest first, then the term running right now, then `Unspecified`. A term whose
+window has closed gets no chip: this is a board about windows closing and it should not
+lead with one that already has. Those rows stay on the board, stay reachable by URL, and
+keep their chip whenever they're selected, so a shared link never loses a control.
+
+Same rule on the card: the eyebrow shows the soonest term still open, not whichever the
+source happened to list first, so a posting tagged both Summer 2026 and Fall 2026 reads
+`FALL 2026` once summer has started.
+
 ### 2.3 Fields to drop
 
 - **`sponsorship`** — 98.9% of rows say `"Other"`. Four distinct values total. It carries
@@ -179,8 +199,10 @@ from the string; don't replace it.
 type Category = 'software' | 'ai_data' | 'hardware' | 'product' | 'quant' | 'other';
 type JobType  = 'internship' | 'new_grad' | 'unknown';
 type TypeConf = 'source' | 'inferred';
-type Term     = 'summer_2026' | 'fall_2026' | 'spring_2026' | 'winter_2026'
-              | 'summer_2027' | 'unspecified';
+type Season   = 'spring' | 'summer' | 'fall' | 'winter';
+// Generative, not a fixed list — see §2.2. A closed union of the terms that
+// happened to be live when it was written is a bug with a delayed fuse.
+type Term     = `${Season}_${number}` | 'unspecified';
 ```
 
 ---

@@ -16,13 +16,15 @@ export type JobType = 'internship' | 'new_grad' | 'unknown';
 // 'inferred' = the internship title classifier fired (§1 finding 5).
 export type TypeConf = 'source' | 'inferred';
 
-export type Term =
-  | 'summer_2026'
-  | 'fall_2026'
-  | 'spring_2026'
-  | 'winter_2026'
-  | 'summer_2027'
-  | 'unspecified';
+export type Season = 'spring' | 'summer' | 'fall' | 'winter';
+
+// Generative, not a fixed list. A hardcoded vocabulary goes stale the moment the
+// calendar moves: the 2026-only version silently collapsed Fall 2027, Winter
+// 2027, Spring 2027/28 and Summer 2028 — 135 term-mentions — into
+// `unspecified`, so postings for those terms couldn't be filtered for at all.
+// The year in a term is the calendar year it STARTS in (winter 2026 begins
+// December 2026), which is what makes them orderable — see lib/taxonomy.ts.
+export type Term = `${Season}_${number}` | 'unspecified';
 
 // The raw record as it appears in either SimplifyJobs listings.json.
 // `terms` exists only on the internship repo (§1 finding 2).

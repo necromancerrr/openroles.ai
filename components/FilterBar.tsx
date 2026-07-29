@@ -9,7 +9,12 @@ import Link from 'next/link';
 import type { Job, Category, Term, JobType } from '@/lib/types';
 import type { Filters } from '@/lib/filter';
 import { typeCounts, facetCounts, remoteCount } from '@/lib/filter';
-import { CATEGORY_LABELS, CATEGORY_ORDER, TERM_LABELS, TERM_ORDER } from '@/lib/taxonomy';
+import {
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  termChipOrder,
+  termLabel,
+} from '@/lib/taxonomy';
 import { Chip } from './Chip';
 import { LocationTypeahead } from './LocationTypeahead';
 import { SearchBox } from './SearchBox';
@@ -39,6 +44,11 @@ export function FilterBar({
   const tCounts = typeCounts(jobs, filters);
 
   const termCounts = facetCounts<Term>(jobs, filters, 'term', (j) => j.terms);
+  // The chip row is drawn from every term in the feed, not just the ones with
+  // results right now: §5.2 wants a zero-count chip disabled in place, not gone,
+  // so the row doesn't reshuffle under the reader as they filter.
+  const allTerms = new Set<Term>();
+  for (const j of jobs) for (const t of j.terms) allTerms.add(t);
   const catCounts = facetCounts<Category>(jobs, filters, 'category', (j) => [j.category]);
   const locCounts = facetCounts<string>(jobs, filters, 'location', (j) => j.locSlugs);
 
@@ -96,10 +106,10 @@ export function FilterBar({
         <fieldset className="filterrow">
           <legend>Filter by term</legend>
           <span className="filterrow__label" aria-hidden>Term</span>
-          {TERM_ORDER.map((t) => (
+          {termChipOrder(allTerms, new Date(), filters.terms).map((t) => (
             <Chip
               key={t}
-              label={TERM_LABELS[t]}
+              label={termLabel(t)}
               count={termCounts.get(t) ?? 0}
               selected={filters.terms.has(t)}
               href={toggleHref(sp, 'term', t)}
