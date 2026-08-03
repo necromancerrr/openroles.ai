@@ -5,6 +5,7 @@
   "description": "Internship & new-grad tracker — the Ledger design system. A scanning surface where age is the only thing that gets color.",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node --experimental-strip-types scripts/fetch-logos.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

@@ -95,8 +95,21 @@ async function main() {
   const byDomain = new Map<string, number>();
   const seen = new Set<string>();
   let totalPostings = 0;
-  for (let i = 0; i < FEEDS.length; i++) {
-    for (const r of await loadFeed(FEEDS[i], FEED_URLS[i])) {
+  let feeds: RawListing[][];
+  try {
+    feeds = await Promise.all(FEEDS.map((c, i) => loadFeed(c, FEED_URLS[i])));
+  } catch (err) {
+    // This runs as `prebuild`, so it must never take a deploy down. No feed
+    // means no ranking, which means nothing to fetch — leave whatever logos are
+    // already there and let the build continue.
+    console.warn(
+      `\n  couldn't read the feeds (${err instanceof Error ? err.message : err})` +
+        `\n  keeping the existing manifest, continuing.\n`,
+    );
+    return;
+  }
+  for (let i = 0; i < feeds.length; i++) {
+    for (const r of feeds[i]) {
       if (!(r.active && r.is_visible)) continue;
       const key = canonicalKey(r.url);
       if (seen.has(key)) continue;
@@ -148,6 +161,18 @@ async function main() {
   for (const f of got) counts.set(f.hash, (counts.get(f.hash) ?? 0) + 1);
   const kept = got.filter((f) => (counts.get(f.hash) ?? 0) < PLACEHOLDER_MIN);
   const dropped = got.length - kept.length;
+
+  // Nothing usable came back — a blocked network, an outage, a bad --from. Do
+  // not wipe logos that are already on disk over a transient failure: leaving
+  // yesterday's art beats shipping a board that silently lost all of it.
+  if (kept.length === 0) {
+    console.warn(
+      `\n  fetched nothing usable (${failed} failures` +
+        (dropped > 0 ? `, ${dropped} placeholders` : '') +
+        `) — leaving the existing manifest untouched.\n`,
+    );
+    return;
+  }
 
   await rm(OUT_DIR, { recursive: true, force: true });
   await mkdir(OUT_DIR, { recursive: true });

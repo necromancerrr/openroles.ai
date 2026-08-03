@@ -87,10 +87,23 @@ anyone's logo.
 
 `--from='…{domain}…'` pulls from somewhere else instead — including a provider,
 once — because the point isn't where the bytes come from, it's that they end up
-as files you serve. The repo ships with an empty manifest and no `public/logos/`:
-these are other companies' trademarks fetched from their own sites, so that fetch
-belongs to whoever deploys this, not to the repo. Commit the results if you want
-them versioned.
+as files you serve.
+
+**On Vercel this runs itself.** `fetch:logos` is wired as npm's `prebuild`, so
+`npm run build` — which is what Vercel runs — fetches the logos into `public/`
+before Next builds, and they ship with the deployment. Every deploy gets current
+artwork and the repo carries no binaries. It costs a minute or two of build time;
+drop the `prebuild` line and commit `public/logos/` instead if you'd rather pay
+that once.
+
+Either way the build cannot be taken down by this: a fetch that returns nothing
+usable leaves the existing manifest alone rather than wiping it, and feeds it
+can't read are a warning, not an error. Verified by building with outbound
+network blocked — 399 of 400 fetches failed and the build still completed.
+
+The repo ships with an empty manifest and no `public/logos/`, because these are
+other companies' trademarks fetched from their own sites: that fetch belongs to
+whoever deploys this, not to the repo.
 
 ### 2. Point at a logo provider
 
