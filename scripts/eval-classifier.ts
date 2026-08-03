@@ -261,13 +261,30 @@ function report(r: Result) {
   );
 }
 
+// A fingerprint of the exact rows scored. Without it a re-run can't tell a rule
+// regression from the feed simply moving on — and it moves a lot: one week of
+// churn shifted internship recall +6pp with no code change at all. Fail only
+// when the rows are identical and the numbers still moved; otherwise report the
+// deltas for what they are, feed drift.
+function fingerprint(rows: Row[]): string {
+  let h = 0x811c9dc5;
+  for (const s of rows.map((r) => `${r.label}:${r.title}`).sort()) {
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+  }
+  return `${rows.length}-${h.toString(16)}`;
+}
+
 interface Baseline {
   recorded_at: string;
   source: string;
+  dataset: string;
   results: Result[];
 }
 
-async function compare(results: Result[]): Promise<boolean> {
+async function compare(results: Result[], dataset: string): Promise<boolean> {
   let baseline: Baseline;
   try {
     baseline = JSON.parse(await readFile(BASELINE_PATH, 'utf8')) as Baseline;
@@ -276,8 +293,20 @@ async function compare(results: Result[]): Promise<boolean> {
     return true;
   }
 
+  const sameRows = baseline.dataset === dataset;
   console.log(`  vs baseline recorded ${baseline.recorded_at.slice(0, 10)}` +
-    ` (tolerance ±${DRIFT_TOLERANCE_PP}pp)\n`);
+    ` (tolerance ±${DRIFT_TOLERANCE_PP}pp)`);
+  if (!sameRows) {
+    // A baseline recorded before fingerprinting existed has no dataset field;
+    // treat it the same way — it can't prove the rows were identical either.
+    const wasRows = baseline.dataset?.split('-')[0] ?? 'unknown';
+    console.log(
+      `  NOTE: these are not the rows the baseline was recorded on` +
+        ` (${wasRows} → ${dataset.split('-')[0]}).` +
+        `\n        Movement below is the feed, not a rule regression. Re-record with --update.`,
+    );
+  }
+  console.log('');
   let ok = true;
   for (const r of results) {
     const was = baseline.results.find((b) => b.classifier === r.classifier);
@@ -287,10 +316,11 @@ async function compare(results: Result[]): Promise<boolean> {
     }
     for (const label of ['internship', 'new_grad'] as Label[]) {
       const d = r.by_class[label].recall_pct - was.by_class[label].recall_pct;
-      const drifted = Math.abs(d) > DRIFT_TOLERANCE_PP;
-      if (drifted) ok = false;
+      const moved = Math.abs(d) > DRIFT_TOLERANCE_PP;
+      if (moved && sameRows) ok = false;
+      const tag = !moved ? '  ok ' : sameRows ? 'DRIFT' : 'feed ';
       console.log(
-        `  ${drifted ? 'DRIFT' : '  ok '} ${r.classifier} ${label.padEnd(11)}` +
+        `  ${tag} ${r.classifier} ${label.padEnd(11)}` +
           ` ${was.by_class[label].recall_pct}% → ${r.by_class[label].recall_pct}%` +
           ` (${d >= 0 ? '+' : ''}${Math.round(d * 10) / 10}pp)`,
       );
@@ -330,6 +360,7 @@ async function main() {
     console.log(`\n  full feed — ${all.length} labeled rows, no sampling`);
   }
 
+  const dataset = fingerprint(rows);
   const results = CLASSIFIERS.map((c) => evaluate(rows, c));
   for (const r of results) report(r);
 
@@ -340,6 +371,7 @@ async function main() {
       source: perClassArg
         ? `stratified sample of ${rows.length}, seed ${seed}`
         : 'full active feed',
+      dataset,
       results,
     };
     await writeFile(BASELINE_PATH, JSON.stringify(baseline, null, 2) + '\n');
@@ -347,9 +379,9 @@ async function main() {
     return;
   }
 
-  const ok = await compare(results);
+  const ok = await compare(results, dataset);
   if (!ok) {
-    console.error('  recall moved more than tolerance — rules changed, or the feed did.');
+    console.error('  same rows, different numbers — a rule changed. Fix it or re-record.');
     process.exit(1);
   }
 }

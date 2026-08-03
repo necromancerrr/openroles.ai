@@ -6,9 +6,13 @@
 //      §4.2 is absolute: age is the only thing that gets color. It always
 //      renders, needs no network, and costs nothing.
 //   2. Optionally a real logo on top of it, if the deployment configures a
-//      logo host (LOGO_URL_TEMPLATE). A logo that 404s paints nothing over an
-//      `alt=""` image, so the monogram underneath stays visible — the fallback
-//      is structural, no client JS involved.
+//      logo host (LOGO_URL_TEMPLATE). It paints as a CSS background layer, so a
+//      logo that 404s draws nothing and the monogram underneath stays visible —
+//      the fallback is structural, with no client JS in the loop.
+
+// Explicit .ts specifier: scripts/ load this module directly under
+// `node --experimental-strip-types`, which does no extension resolution.
+import { LOGO_DOMAIN_OVERRIDES, normalizeCompany } from './logo-overrides.ts';
 
 // Legal suffixes carry no identity; drop them before taking initials.
 const NOISE = new Set([
@@ -45,17 +49,29 @@ export function markInitials(company: string): string {
   return first[0].toUpperCase();
 }
 
-// ATS hosts whose first path segment is the employer's own slug.
-const SLUG_IN_PATH = new Set([
-  'job-boards.greenhouse.io',
-  'boards.greenhouse.io',
-  'job-boards.eu.greenhouse.io',
-  'jobs.lever.co',
-  'jobs.ashbyhq.com',
-  'jobs.smartrecruiters.com',
-  'ats.rippling.com',
-  'apply.workable.com',
-]);
+// ATS families that put the employer's own slug in the URL path. Matched by
+// suffix, not exact host, because every one of them has regional variants
+// (eu.lever.co, job-boards.eu.greenhouse.io) that carry the same slug.
+const ATS_PATH_SUFFIXES = [
+  'greenhouse.io',
+  'lever.co',
+  'ashbyhq.com',
+  'smartrecruiters.com',
+  'workable.com',
+  'rippling.com',
+];
+
+// Path segments that sit in front of the slug rather than being it: locale codes
+// (en-GB, fr) and the ATS's own routing words. `ats.rippling.com/en-GB/rippling/…`
+// and `jobs.lever.co/embed/…` both put the real slug one or two segments in.
+const NOT_A_SLUG = /^(en|fr|de|es|it|nl|pt|ja|ko|zh|[a-z]{2}-[a-zA-Z]{2}|jobs?|embed|careers?|search|o|c)$/i;
+
+function slugFromPath(segments: string[]): string | undefined {
+  for (const seg of segments) {
+    if (!NOT_A_SLUG.test(seg)) return seg;
+  }
+  return undefined;
+}
 
 // Subdomains that mean "careers site", not "different company".
 const CAREERS_PREFIX = /^(jobs|job|careers|career|apply|boards|talent|recruiting|work|www)\./;
@@ -68,6 +84,7 @@ const GENERIC_HOSTS = [
   'paylocity.com', 'jobvite.com', 'breezy.hr', 'recruitee.com',
   'teamtailor.com', 'bamboohr.com', 'applytojob.com', 'trakstar.com',
   'simplify.jobs', 'linkedin.com', 'indeed.com', 'ripplingats.com',
+  'hirevue.com',
 ];
 
 function slugToDomain(slug: string): string | undefined {
@@ -75,10 +92,18 @@ function slugToDomain(slug: string): string | undefined {
   return clean.length >= 2 ? `${clean}.com` : undefined;
 }
 
-// Best-effort employer domain, derived from the apply URL. Company-owned hosts
-// (www.tesla.com, jobs.apple.com) are exact; ATS slugs are a guess, and a wrong
-// guess just means the monogram stays. Never blocks or throws.
-export function logoDomain(applyUrl: string): string | undefined {
+// Best-effort employer domain. A curated override wins when there is one —
+// derivation can't reach .edu/.gov, and can't know that lifeattiktok.com is
+// TikTok's careers brand rather than TikTok's domain (see logo-overrides.ts).
+// Otherwise it's read off the apply URL: company-owned hosts (www.tesla.com,
+// jobs.apple.com) are exact, ATS slugs are a guess, and a wrong guess just means
+// the monogram stays. Never blocks or throws.
+export function logoDomain(applyUrl: string, company?: string): string | undefined {
+  if (company) {
+    const override = LOGO_DOMAIN_OVERRIDES[normalizeCompany(company)];
+    if (override) return override;
+  }
+
   let u: URL;
   try {
     u = new URL(applyUrl);
@@ -88,7 +113,9 @@ export function logoDomain(applyUrl: string): string | undefined {
   const host = u.hostname.toLowerCase();
   const seg = u.pathname.split('/').filter(Boolean);
 
-  if (SLUG_IN_PATH.has(host)) return slugToDomain(seg[0] ?? '');
+  if (ATS_PATH_SUFFIXES.some((s) => host === s || host.endsWith(`.${s}`))) {
+    return slugToDomain(slugFromPath(seg) ?? '');
+  }
 
   // tenant.wd1.myworkdayjobs.com/en-US/… → tenant
   const wd = /^([a-z0-9-]+)\.wd\d+\.myworkdayjobs\.com$/.exec(host);
@@ -100,21 +127,31 @@ export function logoDomain(applyUrl: string): string | undefined {
 
   if (GENERIC_HOSTS.some((g) => host === g || host.endsWith(`.${g}`))) return undefined;
 
-  const own = host.replace(CAREERS_PREFIX, '');
+  // Strip repeatedly: careers hosts stack (jobs.careers.microsoft.com), and one
+  // pass leaves a subdomain that no logo host has ever heard of.
+  let own = host;
+  for (let i = 0; i < 4 && CAREERS_PREFIX.test(own); i++) {
+    own = own.replace(CAREERS_PREFIX, '');
+  }
   return own.includes('.') ? own : undefined;
 }
 
-// A logo host is opt-in: set LOGO_URL_TEMPLATE with a {domain} placeholder,
-// e.g. https://logo.example.com/{domain}. Unset (the default) means monograms
-// only — no third-party requests, nothing to block, nothing to lay out twice.
+// A logo host is opt-in: set LOGO_URL_TEMPLATE with a {domain} placeholder, and
+// optionally {size} if the host takes one —
+//   https://logo.example.com/{domain}?size={size}
+// Unset (the default) means monograms only: no third-party requests, nothing to
+// block, nothing to lay out twice.
 const TEMPLATE = process.env.LOGO_URL_TEMPLATE;
+
+// The mark is a 28px box, so ask for 64px art: enough for a 2x screen, and
+// small enough that a card's logo is a couple of KB rather than a full-size PNG.
+const LOGO_PX = 64;
 
 export function logoSrc(domain: string | undefined): string | undefined {
   if (!TEMPLATE || !domain) return undefined;
   // The result is interpolated into a CSS url("…"), so nothing that could close
   // that string survives. The domain half is percent-encoded anyway.
-  return TEMPLATE.replace('{domain}', encodeURIComponent(domain)).replace(
-    /["'()\\\s]/g,
-    '',
-  );
+  return TEMPLATE.replace('{domain}', encodeURIComponent(domain))
+    .replace('{size}', String(LOGO_PX))
+    .replace(/["'()\\\s]/g, '');
 }

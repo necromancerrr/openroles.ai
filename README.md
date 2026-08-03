@@ -10,14 +10,17 @@ The app ingests three live aggregator feeds, normalizes them into one canonical
 taxonomy, dedups by canonical URL, and renders the board as a Server Component
 with all filter state in the URL.
 
+Measured 2026-08-03 — the feeds turn over daily, so treat every count in this
+README as a snapshot, not a constant:
+
 | Source | Type | Active | Inserted after dedup |
 |---|---|---|---|
-| `SimplifyJobs/Summer2026-Internships` | internship | 1,406 | 1,406 |
-| `SimplifyJobs/New-Grad-Positions` | new grad | 2,842 | 2,841 |
-| `vanshb03/Summer2026-Internships` | internship | 235 | 208 |
+| `SimplifyJobs/Summer2026-Internships` | internship | 1,451 | 1,451 |
+| `SimplifyJobs/New-Grad-Positions` | new grad | 2,492 | 2,492 |
+| `vanshb03/Summer2026-Internships` | internship | 248 | 222 |
 
 The third feed was added because it measurably differs rather than duplicates:
-210 of its 235 active rows aren't in the SimplifyJobs internship feed, and 40%
+222 of its 248 active rows aren't in the SimplifyJobs internship feed, and 40%
 of those were posted inside 7 days against 9% for SimplifyJobs — a freshness gain
 at the head of the board, which is the thing this surface exists to show. It also
 has a staler tail (19% older than 6 months vs 7%), which the decay rail handles
@@ -39,7 +42,8 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-The first request downloads both `listings.json` files (~23 MB), filters to
+The first request downloads all three `listings.json` files (~1.6 MB gzipped,
+~23 MB decoded), filters to
 `active && is_visible` at parse time, and caches for an hour. If the network is
 unavailable it falls back to a bundled sample fixture and the SystemBanner says
 so. `/status` shows the fetch runs and host breakdown.
@@ -57,24 +61,54 @@ Every card leads with a company mark. By default that's a **monogram** derived
 from the name (`Jane Street` → `JS`, `TikTok` → `TT`, `IMC Trading` → `IMC`) —
 no network, nothing to lay out twice, works offline.
 
-To paint real logos over the monograms, point `LOGO_URL_TEMPLATE` at a logo host
-with a `{domain}` placeholder:
+To paint real logos over the monograms, point `LOGO_URL_TEMPLATE` at a logo host.
+`{domain}` is required, `{size}` is filled in with 64 (the mark is a 28px box, so
+64px covers a 2× screen):
 
 ```bash
-LOGO_URL_TEMPLATE='https://logo.example.com/{domain}' npm run dev
+LOGO_URL_TEMPLATE='https://logo.example.com/{domain}?size={size}' npm run dev
 ```
 
-The employer domain is derived from the apply URL at ingest time
-(`lib/logo.ts`) — exact for company-owned hosts (`jobs.apple.com` → `apple.com`),
-a slug guess for ATS hosts (`jobs.lever.co/imc/…` → `imc.com`), and skipped for
-hosts that identify the ATS rather than the employer. Roughly 90% of companies
-resolve to a candidate domain. A logo that 404s or is blocked paints nothing and
-the monogram stays — the fallback is a CSS background layer, not client JS.
+A logo that 404s, is blocked, or never resolves paints nothing and the monogram
+stays. That fallback is a CSS background layer rather than an `<img>`, which is
+what makes it work with no client JS — a broken `<img>` draws the browser's
+broken-image icon instead, and `<object>` fallback content proved unreliable.
+Both were tested before settling on this.
+
+**The limit on real logos is domain accuracy, not the provider.** The employer
+domain is resolved at ingest (`lib/logo.ts`), override first, then derivation:
+
+- **`lib/logo-overrides.ts`** — a checked-in table for the cases derivation
+  cannot get right: careers sites that are their own brand (`lifeattiktok.com` is
+  not TikTok's domain), ATS routing words that aren't a company (`.../embed/...`),
+  and universities and national labs, which a `.com`-from-a-slug fallback can
+  never reach (`psu.edu`, `anl.gov`, `llnl.gov`).
+- **Derivation** handles the rest: company-owned hosts are exact
+  (`jobs.careers.microsoft.com` → `microsoft.com`), ATS families are matched by
+  suffix so regional variants work (`eu.lever.co`), locale and routing segments
+  are skipped (`ats.rippling.com/en-GB/rippling/…` → `rippling.com`), and hosts
+  that name the ATS rather than the employer resolve to nothing at all.
+
+93.6% of postings resolve to a candidate domain. Which of them a given logo host
+actually has is a different question, and a measurable one:
+
+```bash
+npm run audit:logos                     # ranking + coverage, no network
+LOGO_URL_TEMPLATE='…' npm run audit:logos -- --probe
+```
+
+`--probe` requests every distinct domain once and reports hit rate **weighted by
+postings** — what a reader actually sees, not what a company list says — then
+lists the biggest misses so the override table gets extended head-first. Pick a
+provider with that number rather than a hunch; a host that answers 200 with a
+generic placeholder scores as a miss, since a globe icon on every card is worse
+than a clean monogram.
 
 ## Eval harness — how much of the board can be typed from a title?
 
 The two feeds are free labeled ground truth: repo of origin *is* the correct
-answer for 4,248 active rows. That makes the central question measurable rather
+answer for every active row — 3,943 of them on 2026-08-03. That makes the
+central question measurable rather
 than arguable — so it's measured, and the number is recorded.
 
 ```bash
@@ -89,32 +123,36 @@ from the title alone; `miswritten` is given the *other* type; `hidden` is
 
 | rule | internship typed | new-grad typed | board hidden | miswritten |
 |---|---|---|---|---|
-| `keyword-strict` — positive evidence only (what ships) | 82.2% | 11.9% | 64.6% | 0.2% |
-| `keyword-broad` — absence of seniority counts as new-grad | 82.2% | 93.3% | 4.6% | 5.8% |
+| `keyword-strict` — positive evidence only (what ships) | 88.2% | 16.6% | 56.9% | 0.1% |
+| `keyword-broad` — absence of seniority counts as new-grad | 88.2% | 94.1% | 3.9% | 4.3% |
 
 Read those two rows together and the case for reading the **description** rather
-than the title writes itself. Strict hides two-thirds of the board. Broad buys
-that back by guessing, and pays for it by labelling **17.5% of internships as
-new-grad** — 246 postings sent to the wrong tab. One error costs a reader a
-glance; the other costs an application. Neither rule is good enough, and no
-title-only rule will be, because the eligibility signal isn't in the title.
+than the title writes itself. Strict hides more than half the board. Broad buys
+that back by guessing, and pays for it by labelling **11.6% of internships as
+new-grad** — postings sent to the wrong tab. One error costs a reader a glance;
+the other costs an application. Neither rule is good enough, and no title-only
+rule will be, because the eligibility signal isn't in the title.
 
 A 300-row stratified sample lands within ~4pp of the full-feed figure, which is
 the useful fact for a classifier that bills per row: 300 rows is enough to decide
 with. The full feed is the default only because a regex costs nothing to run
-4,248 times.
+four thousand times.
 
 `eval/type-classifier.json` holds the recorded numbers and a re-run compares
-against it (±2pp, wide enough to absorb daily feed churn, narrow enough to catch
-a rule regression). Adding a model-backed classifier means adding one entry to
-`CLASSIFIERS` in `scripts/eval-classifier.ts`, not rewriting the harness.
+against it at ±2pp. The baseline also fingerprints the exact rows it scored,
+because feed churn alone moved internship recall **+6pp in one week** with no
+code change — so a re-run fails only when the rows are identical and the numbers
+moved (a rule regression), and otherwise reports the movement as what it is. A
+check that cries wolf on data drift is a check people learn to ignore. Adding a
+model-backed classifier means adding one entry to `CLASSIFIERS` in
+`scripts/eval-classifier.ts`, not rewriting the harness.
 
 Two honest caveats. Simplify's labels are themselves imperfect. And **the design
 doc's 29.5% new-grad figure did not reproduce**: a strict positive-evidence rule
-measures 11.9%, and no keyword set gets near 29.5% without switching to
-negative evidence, which scores 93.3% by guessing. The doc's *conclusion* —
-internship classifier only, surface `unknown` — is what the numbers support;
-its percentage isn't one this harness can confirm.
+measures 16.6%, and no keyword set gets near 29.5% without switching to negative
+evidence, which scores 94.1% by guessing. The doc's *conclusion* — internship
+classifier only, surface `unknown` — is what the numbers support; its percentage
+isn't one this harness can confirm.
 
 ## How it maps to the design doc
 
@@ -124,6 +162,7 @@ its percentage isn't one this harness can confirm.
 | §1 finding 4 — aggregator is primary, ATS is the freshness layer | `lib/ingest.ts`, host buckets in `lib/canonical.ts` |
 | §1 finding 5 — internship classifier only, never a new-grad one | `lib/classify.ts` (type comes from repo-of-origin here) |
 | addendum §5 — eval harness on the labeled feeds, recorded and re-runnable | `scripts/eval-classifier.ts`, `eval/type-classifier.json` |
+| §7 pattern — work the mapping out once, check the table in | `lib/logo-overrides.ts`, `scripts/audit-logo-domains.ts` |
 | §2.1 — normalize `category`, **fail loudly** on unseen values | `lib/taxonomy.ts` (`unseenCategories`) |
 | §2.2 — `terms` parsed not table-mapped, ordered by start date, open terms first | `lib/taxonomy.ts` (`parseTerm`, `termChipOrder`, `primaryTerm`) |
 | §2.3 — drop `sponsorship`/`degrees` from the UI | not surfaced |

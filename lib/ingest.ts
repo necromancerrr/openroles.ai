@@ -87,7 +87,7 @@ function toJob(raw: RawListing, type: JobType): Job {
     locSlugs: locations.map(locSlug),
     isRemote: deriveRemote(locations),
     initials: markInitials(raw.company_name),
-    logoUrl: logoSrc(logoDomain(raw.url)),
+    logoUrl: logoSrc(logoDomain(raw.url, raw.company_name)),
     search: `${raw.company_name} ${raw.title}`.toLowerCase(),
     datePosted: raw.date_posted,
     firstSeenAt: raw.date_posted, // approximation; a persisted DB stores our own first-fetch
