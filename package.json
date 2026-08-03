@@ -10,7 +10,8 @@
     "lint": "next lint",
     "ingest:sources": "node --experimental-strip-types scripts/generate-sources.ts",
     "eval:classifier": "node --experimental-strip-types scripts/eval-classifier.ts",
-    "audit:logos": "node --experimental-strip-types scripts/audit-logo-domains.ts"
+    "audit:logos": "node --experimental-strip-types scripts/audit-logo-domains.ts",
+    "fetch:logos": "node --experimental-strip-types scripts/fetch-logos.ts"
   },
   "dependencies": {
     "next": "^16.2.11",

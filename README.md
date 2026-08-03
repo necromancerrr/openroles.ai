@@ -61,13 +61,48 @@ Every card leads with a company mark. By default that's a **monogram** derived
 from the name (`Jane Street` → `JS`, `TikTok` → `TT`, `IMC Trading` → `IMC`) —
 no network, nothing to lay out twice, works offline.
 
-To paint real logos over the monograms, point `LOGO_URL_TEMPLATE` at a logo host.
+There are two ways to get a real logo into that box, and the first needs no logo
+provider at all.
+
+### 1. Fetch once, serve them yourself (no provider)
+
+```bash
+npm run fetch:logos            # each company's own /favicon.ico
+npm run fetch:logos -- --top=600
+```
+
+This is the §7 pattern applied to images: do the work ahead of time, keep the
+artifact, depend on nobody at render time. It ranks domains by how many postings
+ride on each — so a bounded run covers the most cards rather than an arbitrary
+slice of the alphabet — fetches each company's own favicon, writes
+`public/logos/<domain>.<ext>`, and regenerates `lib/logo-manifest.ts`. After that
+the cards load logos from **this app's own origin**: no third-party request when a
+card paints, nothing to rate-limit, nothing that can start returning a globe or
+disappear next quarter.
+
+It refuses three things that would otherwise end up on a card: non-images (an HTML
+error page served with a 200), bodies under 100 bytes, and any image returned for
+three or more different domains, which is a source's placeholder rather than
+anyone's logo.
+
+`--from='…{domain}…'` pulls from somewhere else instead — including a provider,
+once — because the point isn't where the bytes come from, it's that they end up
+as files you serve. The repo ships with an empty manifest and no `public/logos/`:
+these are other companies' trademarks fetched from their own sites, so that fetch
+belongs to whoever deploys this, not to the repo. Commit the results if you want
+them versioned.
+
+### 2. Point at a logo provider
+
 `{domain}` is required, `{size}` is filled in with 64 (the mark is a 28px box, so
 64px covers a 2× screen):
 
 ```bash
 LOGO_URL_TEMPLATE='https://logo.example.com/{domain}?size={size}' npm run dev
 ```
+
+A locally stored logo always wins over the template, so the two can coexist: fetch
+what you can, let a provider cover the rest.
 
 A logo that 404s, is blocked, or never resolves paints nothing and the monogram
 stays. That fallback is a CSS background layer rather than an `<img>`, which is
@@ -183,6 +218,7 @@ isn't one this harness can confirm.
 | §1 finding 5 — internship classifier only, never a new-grad one | `lib/classify.ts` (type comes from repo-of-origin here) |
 | addendum §5 — eval harness on the labeled feeds, recorded and re-runnable | `scripts/eval-classifier.ts`, `eval/type-classifier.json` |
 | §7 pattern — work the mapping out once, check the table in | `lib/logo-overrides.ts`, `scripts/audit-logo-domains.ts` |
+| §7 pattern — fetch logos once offline, serve them from our own origin | `scripts/fetch-logos.ts`, `lib/logo-manifest.ts` |
 | §2.1 — normalize `category`, **fail loudly** on unseen values | `lib/taxonomy.ts` (`unseenCategories`) |
 | §2.2 — `terms` parsed not table-mapped, ordered by start date, open terms first | `lib/taxonomy.ts` (`parseTerm`, `termChipOrder`, `primaryTerm`) |
 | §2.3 — drop `sponsorship`/`degrees` from the UI | not surfaced |

@@ -13,6 +13,7 @@
 // Explicit .ts specifier: scripts/ load this module directly under
 // `node --experimental-strip-types`, which does no extension resolution.
 import { LOGO_DOMAIN_OVERRIDES, normalizeCompany } from './logo-overrides.ts';
+import { LOCAL_LOGOS } from './logo-manifest.ts';
 
 // Legal suffixes carry no identity; drop them before taking initials.
 const NOISE = new Set([
@@ -148,7 +149,16 @@ const TEMPLATE = process.env.LOGO_URL_TEMPLATE;
 const LOGO_PX = 64;
 
 export function logoSrc(domain: string | undefined): string | undefined {
-  if (!TEMPLATE || !domain) return undefined;
+  if (!domain) return undefined;
+
+  // A logo we already hold wins over any provider: it's same-origin, so there's
+  // no third-party request when the card paints, nothing to rate-limit, and
+  // nothing that can quietly start serving a globe instead. `npm run fetch:logos`
+  // populates public/logos/ and regenerates the manifest.
+  const local = LOCAL_LOGOS[domain];
+  if (local) return `/logos/${local}`;
+
+  if (!TEMPLATE) return undefined;
   // The result is interpolated into a CSS url("…"), so nothing that could close
   // that string survives. The domain half is percent-encoded anyway.
   return TEMPLATE.replace('{domain}', encodeURIComponent(domain))
