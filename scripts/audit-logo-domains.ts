@@ -4,14 +4,15 @@
 //
 // Run:  npm run audit:logos                 # ranking + coverage, no network
 //       npm run audit:logos -- --top=60
-//       LOGO_URL_TEMPLATE='https://logo.example.com/{domain}' \
-//         npm run audit:logos -- --probe    # measure a provider's real hit rate
+//       npm run audit:logos -- --probe \
+//         --template='https://icons.duckduckgo.com/ip3/{domain}.ico'
+//                                           # measure a provider's real hit rate
 //
 // --probe is how you choose a logo host with a number instead of a hunch: it
 // requests every distinct domain once and reports coverage weighted by postings,
 // which is what a reader actually sees. It needs egress to that host.
 
-import { logoDomain, logoSrc } from '../lib/logo.ts';
+import { logoDomain } from '../lib/logo.ts';
 import { LOGO_DOMAIN_OVERRIDES, normalizeCompany } from '../lib/logo-overrides.ts';
 import { canonicalKey } from '../lib/canonical.ts';
 import type { RawListing } from '../lib/types.ts';
@@ -124,44 +125,91 @@ async function main() {
   }
 
   if (!flag('probe')) {
-    console.log('\n  pass --probe with LOGO_URL_TEMPLATE set to measure real hit rate\n');
+    console.log('\n  pass --probe with --template=… (or LOGO_URL_TEMPLATE) to measure hit rate\n');
     return;
   }
-  if (!process.env.LOGO_URL_TEMPLATE) {
-    console.error('\n  --probe needs LOGO_URL_TEMPLATE set.\n');
+  // --template beats the env var so two providers can be compared back to back
+  // without re-exporting anything.
+  const template = arg('template') ?? process.env.LOGO_URL_TEMPLATE;
+  if (!template) {
+    console.error('\n  --probe needs --template=… or LOGO_URL_TEMPLATE.\n');
     process.exit(1);
   }
+  const srcFor = (domain: string) =>
+    template
+      .replace('{domain}', encodeURIComponent(domain))
+      .replace('{size}', '64');
+  console.log(`\n  provider: ${template}`);
 
   // One request per distinct domain, not per posting.
   const distinct = new Map<string, number>();
   for (const c of resolved) distinct.set(c.domain!, (distinct.get(c.domain!) ?? 0) + c.postings);
 
-  console.log(`\n  probing ${distinct.size} distinct domains…`);
-  let hit = 0;
-  let hitPostings = 0;
-  const misses: [string, number][] = [];
+  console.log(`  probing ${distinct.size} distinct domains…`);
+
+  // Some providers answer 200 with a generic placeholder — a globe, a lettermark
+  // — instead of 404ing on a domain they don't have. The status code can't see
+  // that, and it matters: a globe on every card is worse than a clean monogram,
+  // because it looks like a logo that failed rather than a mark that's meant.
+  // Identical bytes returned for many different domains is the tell, so hash
+  // each body and treat any image repeated across several domains as a miss.
+  const byHash = new Map<string, string[]>();
+  const responses = new Map<string, { ok: boolean; hash: string; postings: number }>();
   const entries = [...distinct.entries()];
   const CONCURRENCY = 8;
+
+  function hashBytes(buf: ArrayBuffer): string {
+    const view = new Uint8Array(buf);
+    let h = 0x811c9dc5;
+    for (let i = 0; i < view.length; i++) {
+      h ^= view[i];
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return `${view.length}-${h.toString(16)}`;
+  }
+
   for (let i = 0; i < entries.length; i += CONCURRENCY) {
     await Promise.all(
       entries.slice(i, i + CONCURRENCY).map(async ([domain, postings]) => {
-        const src = logoSrc(domain);
-        if (!src) return;
         try {
-          const res = await fetch(src, { method: 'GET' });
-          // A provider that answers 200 with a generic placeholder is a miss the
-          // status code can't see — check the body has real weight.
-          const bytes = (await res.arrayBuffer()).byteLength;
-          if (res.ok && bytes > 100) {
-            hit++;
-            hitPostings += postings;
-          } else {
-            misses.push([domain, postings]);
-          }
+          const res = await fetch(srcFor(domain));
+          const buf = await res.arrayBuffer();
+          const ok = res.ok && buf.byteLength > 100;
+          const hash = hashBytes(buf);
+          responses.set(domain, { ok, hash, postings });
+          if (ok) byHash.set(hash, [...(byHash.get(hash) ?? []), domain]);
         } catch {
-          misses.push([domain, postings]);
+          responses.set(domain, { ok: false, hash: 'error', postings });
         }
       }),
+    );
+  }
+
+  // Any image body served for 3+ different domains is that provider's fallback,
+  // not those companies' logos.
+  const PLACEHOLDER_MIN = 3;
+  const placeholders = new Set(
+    [...byHash.entries()].filter(([, ds]) => ds.length >= PLACEHOLDER_MIN).map(([h]) => h),
+  );
+
+  let hit = 0;
+  let hitPostings = 0;
+  let placeheld = 0;
+  const misses: [string, number][] = [];
+  for (const [domain, r] of responses) {
+    if (r.ok && !placeholders.has(r.hash)) {
+      hit++;
+      hitPostings += r.postings;
+    } else {
+      if (r.ok) placeheld++;
+      misses.push([domain, r.postings]);
+    }
+  }
+
+  if (placeholders.size > 0) {
+    console.log(
+      `\n  ${placeheld} domains got one of ${placeholders.size} generic placeholder image(s)` +
+        ` — counted as misses, since a placeholder on a card is worse than a monogram.`,
     );
   }
 

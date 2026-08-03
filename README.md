@@ -94,15 +94,35 @@ actually has is a different question, and a measurable one:
 
 ```bash
 npm run audit:logos                     # ranking + coverage, no network
-LOGO_URL_TEMPLATE='…' npm run audit:logos -- --probe
+
+# measure a provider — --template beats LOGO_URL_TEMPLATE so two can be
+# compared back to back without re-exporting anything
+npm run audit:logos -- --probe --template='https://icons.duckduckgo.com/ip3/{domain}.ico'
+npm run audit:logos -- --probe --template='https://img.logo.dev/{domain}?token=pk_…&size={size}'
 ```
 
 `--probe` requests every distinct domain once and reports hit rate **weighted by
 postings** — what a reader actually sees, not what a company list says — then
-lists the biggest misses so the override table gets extended head-first. Pick a
-provider with that number rather than a hunch; a host that answers 200 with a
-generic placeholder scores as a miss, since a globe icon on every card is worse
-than a clean monogram.
+lists the biggest misses so the override table gets extended head-first.
+
+It also hashes every response body, because the number that matters is not "did
+it return 200". Some providers never 404: they answer with a **generic globe or
+lettermark** for a domain they don't have, which paints on the card as a logo
+that failed rather than a mark that was meant — strictly worse than the monogram
+it covered up. An identical image returned for three or more different domains is
+that provider's fallback, and the audit counts those as misses and says how many.
+
+Two things to know when picking, both worth confirming with `--probe` rather than
+taking on trust:
+
+- **DuckDuckGo** (`icons.duckduckgo.com/ip3/{domain}.ico`) is free and keyless,
+  which makes it the cheapest thing to try first. It serves favicons, so expect
+  small, square, sometimes-cropped art rather than proper wordmarks.
+- **Google's** `s2/favicons` endpoint returns a generic globe on a miss instead of
+  a 404. That defeats the monogram fallback entirely — the placeholder detector
+  above exists partly because of this shape of provider.
+- **logo.dev** needs a publishable token and returns real logo artwork at a
+  requested size; `{size}` is filled with 64.
 
 ## Eval harness — how much of the board can be typed from a title?
 
