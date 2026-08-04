@@ -65,6 +65,23 @@ export const LOGO_DOMAIN_OVERRIDES: Record<string, string> = {
   'argonne national laboratory': 'anl.gov', // argonne.com
   'lawrence livermore national laboratory llnl': 'llnl.gov', // llnl.com
 
+  // Spotted on the live board with a monogram where a logo belonged. The slug
+  // guess can't know a company's real name or TLD: NREL trades as "National
+  // Laboratory of the Rockies" on its postings, and BCBS Michigan is bcbsm.com.
+  'national laboratory of the rockies': 'nrel.gov',
+  'blue cross blue shield of michigan': 'bcbsm.com',
+  kabam: 'kabam.com',
+  'espa ai': 'espa.ai',
+  'mistral ai': 'mistral.ai',
+  'together ai': 'together.ai',
+  'scale ai': 'scale.com',
+  'perplexity ai': 'perplexity.ai',
+  'field ai': 'field.ai',
+  'persona ai': 'personainc.ai',
+  'retell ai': 'retellai.com',
+  'pony ai': 'pony.ai',
+  'etched ai': 'etched.com',
+
   // Hosts the derivation skips as generic (Workday, Oracle Cloud, iCIMS), which
   // is correct — the host names the ATS, not the employer — leaving these blank.
   'jp morgan chase': 'jpmorganchase.com',

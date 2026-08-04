@@ -99,10 +99,21 @@ function slugToDomain(slug: string): string | undefined {
 // Otherwise it's read off the apply URL: company-owned hosts (www.tesla.com,
 // jobs.apple.com) are exact, ATS slugs are a guess, and a wrong guess just means
 // the monogram stays. Never blocks or throws.
-export function logoDomain(applyUrl: string, company?: string): string | undefined {
+// Where a domain came from, which decides how much it can be trusted. `host` is
+// read straight off the apply URL and is as good as fact; `slug` is an ATS path
+// segment with `.com` bolted on, which is a guess — and a guess that's wrong for
+// every company on .ai, .io, .gov or .edu. Only guesses are worth re-trying under
+// another TLD; swapping the TLD on a known-good host would fetch a stranger's
+// logo (tesla.ai is not Tesla).
+export type DomainSource = 'override' | 'host' | 'slug';
+
+export function resolveLogoDomain(
+  applyUrl: string,
+  company?: string,
+): { domain: string; source: DomainSource } | undefined {
   if (company) {
     const override = LOGO_DOMAIN_OVERRIDES[normalizeCompany(company)];
-    if (override) return override;
+    if (override) return { domain: override, source: 'override' };
   }
 
   let u: URL;
@@ -113,18 +124,22 @@ export function logoDomain(applyUrl: string, company?: string): string | undefin
   }
   const host = u.hostname.toLowerCase();
   const seg = u.pathname.split('/').filter(Boolean);
+  const guess = (slug: string | undefined) => {
+    const domain = slugToDomain(slug ?? '');
+    return domain ? { domain, source: 'slug' as const } : undefined;
+  };
 
   if (ATS_PATH_SUFFIXES.some((s) => host === s || host.endsWith(`.${s}`))) {
-    return slugToDomain(slugFromPath(seg) ?? '');
+    return guess(slugFromPath(seg));
   }
 
   // tenant.wd1.myworkdayjobs.com/en-US/… → tenant
   const wd = /^([a-z0-9-]+)\.wd\d+\.myworkdayjobs\.com$/.exec(host);
-  if (wd) return slugToDomain(wd[1]);
+  if (wd) return guess(wd[1]);
 
   // careers-acme.icims.com → acme
   const icims = /^(?:careers-)?([a-z0-9-]+)\.icims\.com$/.exec(host);
-  if (icims) return slugToDomain(icims[1]);
+  if (icims) return guess(icims[1]);
 
   if (GENERIC_HOSTS.some((g) => host === g || host.endsWith(`.${g}`))) return undefined;
 
@@ -134,7 +149,11 @@ export function logoDomain(applyUrl: string, company?: string): string | undefin
   for (let i = 0; i < 4 && CAREERS_PREFIX.test(own); i++) {
     own = own.replace(CAREERS_PREFIX, '');
   }
-  return own.includes('.') ? own : undefined;
+  return own.includes('.') ? { domain: own, source: 'host' } : undefined;
+}
+
+export function logoDomain(applyUrl: string, company?: string): string | undefined {
+  return resolveLogoDomain(applyUrl, company)?.domain;
 }
 
 // A logo host is opt-in: set LOGO_URL_TEMPLATE with a {domain} placeholder, and
