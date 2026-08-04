@@ -92,9 +92,14 @@ as files you serve.
 **On Vercel this runs itself.** `fetch:logos` is wired as npm's `prebuild`, so
 `npm run build` — which is what Vercel runs — fetches the logos into `public/`
 before Next builds, and they ship with the deployment. Every deploy gets current
-artwork and the repo carries no binaries. It costs a minute or two of build time;
-drop the `prebuild` line and commit `public/logos/` instead if you'd rather pay
-that once.
+artwork and the repo carries no binaries. Drop the `prebuild` line and commit
+`public/logos/` instead if you'd rather pay that cost once.
+
+The run is capped by `--budget=SECONDS` (300 in `prebuild`), because an
+unreachable host costs a full timeout and a thousand of them add up to more than
+a build should wait. Whatever has been fetched when the budget expires is what
+gets written, so the cap trades tail coverage for a predictable build. If the log
+says `budget of 300s reached`, later domains were skipped — raise it.
 
 Either way the build cannot be taken down by this: a fetch that returns nothing
 usable leaves the existing manifest alone rather than wiping it, and feeds it
