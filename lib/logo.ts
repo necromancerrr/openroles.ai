@@ -74,6 +74,29 @@ function slugFromPath(segments: string[]): string | undefined {
   return undefined;
 }
 
+// ATS families where the SUBDOMAIN is the employer rather than the software:
+// neboagency.applytojob.com, twosigma.avature.net, wvu.taleo.net. Treating these
+// as generic — which they were — meant 113 postings could never resolve a domain
+// at all, so those cards could never show a logo no matter what the fetcher did.
+//
+// Deliberately NOT here, because their subdomain names the vendor's own
+// infrastructure and the employer is in the path: wd5.myworkdaysite.com (a
+// Workday pod), jobs.jobvite.com, recruiting.paylocity.com. Guessing from those
+// would produce "wd5.com".
+const ATS_SUBDOMAIN_SUFFIXES = [
+  'applytojob.com',
+  'avature.net',
+  'taleo.net',
+  'breezy.hr',
+  'bamboohr.com',
+];
+
+// Labels that route rather than identify. `www.applytojob.com` has no employer
+// in it at all, and without this check the subdomain rule above happily returns
+// "www.com".
+const ROUTING_LABEL =
+  /^(jobs?|careers?|apply|boards|talent|recruiting|work|www|search|embed)$/i;
+
 // Subdomains that mean "careers site", not "different company".
 const CAREERS_PREFIX = /^(jobs|job|careers|career|apply|boards|talent|recruiting|work|www)\./;
 
@@ -93,12 +116,6 @@ function slugToDomain(slug: string): string | undefined {
   return clean.length >= 2 ? `${clean}.com` : undefined;
 }
 
-// Best-effort employer domain. A curated override wins when there is one —
-// derivation can't reach .edu/.gov, and can't know that lifeattiktok.com is
-// TikTok's careers brand rather than TikTok's domain (see logo-overrides.ts).
-// Otherwise it's read off the apply URL: company-owned hosts (www.tesla.com,
-// jobs.apple.com) are exact, ATS slugs are a guess, and a wrong guess just means
-// the monogram stays. Never blocks or throws.
 // Where a domain came from, which decides how much it can be trusted. `host` is
 // read straight off the apply URL and is as good as fact; `slug` is an ATS path
 // segment with `.com` bolted on, which is a guess — and a guess that's wrong for
@@ -107,6 +124,12 @@ function slugToDomain(slug: string): string | undefined {
 // logo (tesla.ai is not Tesla).
 export type DomainSource = 'override' | 'host' | 'slug';
 
+// Best-effort employer domain. A curated override wins when there is one —
+// derivation can't reach .edu/.gov, and can't know that lifeattiktok.com is
+// TikTok's careers brand rather than TikTok's domain (see logo-overrides.ts).
+// Otherwise it's read off the apply URL: company-owned hosts (www.tesla.com,
+// jobs.apple.com) are exact, ATS slugs are a guess, and a wrong guess just means
+// the monogram stays. Never blocks or throws.
 export function resolveLogoDomain(
   applyUrl: string,
   company?: string,
@@ -140,6 +163,16 @@ export function resolveLogoDomain(
   // careers-acme.icims.com → acme
   const icims = /^(?:careers-)?([a-z0-9-]+)\.icims\.com$/.exec(host);
   if (icims) return guess(icims[1]);
+
+  // acme.applytojob.com → acme. The label immediately before the family is the
+  // employer; a routing label like www/jobs/careers is not, and would otherwise
+  // produce "www.com".
+  for (const fam of ATS_SUBDOMAIN_SUFFIXES) {
+    if (!host.endsWith(`.${fam}`)) continue;
+    const label = host.slice(0, -(fam.length + 1)).split('.').pop();
+    const real = label && !ROUTING_LABEL.test(label) && !NOT_A_SLUG.test(label);
+    return real ? guess(label) : undefined;
+  }
 
   if (GENERIC_HOSTS.some((g) => host === g || host.endsWith(`.${g}`))) return undefined;
 

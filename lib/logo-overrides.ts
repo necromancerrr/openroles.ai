@@ -86,6 +86,11 @@ export const LOGO_DOMAIN_OVERRIDES: Record<string, string> = {
   // is correct — the host names the ATS, not the employer — leaving these blank.
   'jp morgan chase': 'jpmorganchase.com',
   oracle: 'oracle.com',
+  // Oracle Cloud tenants are opaque four-letter codes — egug.fa.us2.oraclecloud.com
+  // is American Express — so nothing can be derived and each one needs naming.
+  // 119 postings sit behind that host; these are the ones identified so far.
+  'american express': 'amex.com',
+  onsemi: 'onsemi.com',
   'texas instruments': 'ti.com',
   honeywell: 'honeywell.com',
   nokia: 'nokia.com',
