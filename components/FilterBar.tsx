@@ -8,7 +8,7 @@
 import Link from 'next/link';
 import type { Job, Category, Term, JobType } from '@/lib/types';
 import type { Filters } from '@/lib/filter';
-import { typeCounts, facetCounts, remoteCount } from '@/lib/filter';
+import { typeCounts, facetCounts, remoteCount, campusCount } from '@/lib/filter';
 import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
@@ -76,6 +76,22 @@ export function FilterBar({
 
   return (
     <div className="filterbar">
+      <div className="campusbar">
+        <div className="campusbar__copy">
+          <span className="campusbar__badge">UW launchpad</span>
+          <div>
+            <strong>Seattle + remote, in one tap.</strong>
+            <p>Built for Huskies searching around class, commute, and graduation.</p>
+          </div>
+        </div>
+        <Chip
+          label={filters.campus ? 'Campus view on' : 'Try campus view'}
+          count={campusCount(jobs, filters)}
+          selected={filters.campus}
+          href={toggleFlagHref(sp, 'campus')}
+        />
+      </div>
+
       {/* 0. Search — widest possible net, so it sits above the facets. */}
       <div className="filterrow">
         <span className="filterrow__label">Search</span>

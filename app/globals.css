@@ -53,7 +53,9 @@
 
 body {
   margin: 0;
-  background: var(--paper);
+  background:
+    radial-gradient(circle at 12% -10%, rgb(14 107 87 / 0.08), transparent 28rem),
+    var(--paper);
   color: var(--ink);
   font-family: var(--font-ui);
   font-size: var(--t-body);
@@ -66,7 +68,7 @@ a { color: inherit; text-decoration: none; }
 .mono { font-family: var(--font-data); }
 
 /* --- Layout ------------------------------------------------------------- */
-.shell { max-width: 1120px; margin: 0 auto; padding: 0 var(--s-4) var(--s-7); }
+.shell { max-width: 1180px; margin: 0 auto; padding: 0 var(--s-5) var(--s-7); }
 
 .masthead {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -91,8 +93,79 @@ a { color: inherit; text-decoration: none; }
   color: var(--ink-3);
 }
 
+/* --- Editorial intro --------------------------------------------------- */
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(240px, 0.7fr);
+  gap: clamp(var(--s-5), 5vw, var(--s-7));
+  align-items: end;
+  padding: clamp(var(--s-6), 7vw, 76px) 0 var(--s-6);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.intro h1 {
+  max-width: 760px;
+  margin: var(--s-3) 0 var(--s-4);
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 7vw, 5.8rem);
+  font-weight: 650;
+  letter-spacing: -0.055em;
+  line-height: 0.92;
+}
+.intro__copy > p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: clamp(1rem, 1.5vw, 1.18rem);
+}
+.intro__note {
+  border-top: 2px solid var(--ink);
+  padding-top: var(--s-3);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-3);
+  color: var(--ink-2);
+}
+.intro__note p { margin: 0; font-size: var(--t-meta); }
+.intro__note-index {
+  font-family: var(--font-data);
+  font-size: var(--t-micro);
+  color: var(--age-0);
+}
+
 /* --- FilterBar ---------------------------------------------------------- */
 .filterbar { padding: var(--s-5) 0; border-bottom: 1px solid var(--rule); }
+.campusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  padding: var(--s-4);
+  margin-bottom: var(--s-5);
+  color: var(--paper);
+  background: var(--ink);
+  border-radius: var(--r-md);
+}
+.campusbar__copy { display: flex; align-items: center; gap: var(--s-4); }
+.campusbar__copy strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+.campusbar__copy p { margin: 2px 0 0; color: var(--rule-strong); font-size: var(--t-meta); }
+.campusbar__badge {
+  flex: none;
+  padding: 4px 7px;
+  border: 1px solid rgb(244 245 243 / 0.32);
+  border-radius: var(--r-sm);
+  font-family: var(--font-data);
+  font-size: var(--t-micro);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.campusbar > .chip { flex: none; color: var(--paper); border-color: rgb(244 245 243 / 0.3); }
+.campusbar > .chip:hover { border-color: var(--paper); }
+.campusbar > .chip[data-selected="true"] { color: var(--ink); background: var(--paper); border-color: var(--paper); }
 .filterrow { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; margin-bottom: var(--s-4); }
 .filterrow:last-child { margin-bottom: 0; }
 .filterrow__label {
@@ -201,7 +274,10 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
   padding: var(--s-4) var(--s-4) var(--s-4) var(--s-5);
   border: 1px solid var(--rule);
   margin: 0 -1px -1px 0; /* collapse shared edges to one hairline */
-  transition: background var(--dur-fast) var(--ease);
+  transition:
+    background var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
   /* The board is long. Let the browser skip layout and paint for cards below
      the fold — worth ~40% of load time once the window is a few hundred cards
      deep. The placeholder size is the measured median card height at every
@@ -223,10 +299,10 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
   width: var(--rail-w); background: var(--rail-color, var(--age-4));
   transition: width var(--dur-fast) var(--ease);
 }
-.card:hover { background: #FFFFFF; }
+.card:hover { background: #FFFFFF; border-color: var(--rule-strong); transform: translateY(-2px); z-index: 1; }
 .card:hover::before { width: 5px; }
 .card:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
-.card:active { transform: translateY(1px); }
+.card:active { transform: translateY(0); }
 .card--unclassified::before { background: repeating-linear-gradient(var(--ink-3) 0 4px, transparent 4px 8px); }
 .card--inactive { opacity: 0.6; }
 .card--inactive::before { background: var(--age-4); }
@@ -343,10 +419,22 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
    then wraps the rest, which reads as a staircase. Below this width the label
    takes its own line and the chips flow as one block. */
 @media (max-width: 40rem) {
+  .shell { padding-inline: var(--s-4); }
+  .intro { grid-template-columns: 1fr; padding-top: var(--s-6); }
+  .intro h1 { font-size: clamp(2.65rem, 15vw, 4rem); }
+  .campusbar { align-items: flex-start; flex-direction: column; }
+  .campusbar__copy { align-items: flex-start; }
+  .campusbar > .chip { width: 100%; justify-content: space-between; }
   .filterrow { gap: var(--s-2); margin-bottom: var(--s-5); }
   .filterrow__label { width: 100%; }
   .search { width: 100%; }
   .search__input { max-width: none; }
   .gridhead { align-items: flex-start; }
   .gridhead__right { width: 100%; justify-content: space-between; }
+}
+
+@media (max-width: 28rem) {
+  .campusbar__copy { flex-direction: column; gap: var(--s-3); }
+  .segmented { width: 100%; }
+  .segmented a { flex: 1; justify-content: center; padding-inline: var(--s-2); }
 }

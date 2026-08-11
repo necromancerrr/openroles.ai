@@ -22,7 +22,7 @@ import type { RawListing } from '../lib/types.ts';
 const FEEDS: { url: string; cache: string }[] = [
   {
     cache: '.eval-cache/internships.json',
-    url: 'https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/.github/scripts/listings.json',
+    url: 'https://raw.githubusercontent.com/SimplifyJobs/Summer2027-Internships/dev/.github/scripts/listings.json',
   },
   {
     cache: '.eval-cache/new-grad.json',

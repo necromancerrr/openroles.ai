@@ -15,10 +15,21 @@ export interface Filters {
   words: string[];
   query: string; // the raw string, for echoing back in the UI
   remote: boolean;
+  // A campus-friendly shortcut: roles in the Seattle tech corridor plus
+  // anything explicitly remote. It is a product filter, not a claim of UW
+  // affiliation.
+  campus: boolean;
 }
 
 // A query longer than this is a paste accident, not a search.
 const MAX_QUERY = 80;
+
+const SEATTLE_AREA =
+  /\b(seattle|bellevue|redmond|kirkland|renton|bothell|issaquah|tacoma|everett|mercer island)\b/i;
+
+export function isCampusFit(job: Job): boolean {
+  return job.isRemote || job.locations.some((location) => SEATTLE_AREA.test(location));
+}
 
 export function parseFilters(sp: Record<string, string | string[] | undefined>): Filters {
   const first = (v: string | string[] | undefined) =>
@@ -43,6 +54,7 @@ export function parseFilters(sp: Record<string, string | string[] | undefined>):
     query,
     words: query.toLowerCase().split(/\s+/).filter(Boolean),
     remote: first(sp.remote) === '1',
+    campus: first(sp.campus) === '1',
   };
 }
 
@@ -51,11 +63,12 @@ export function parseFilters(sp: Record<string, string | string[] | undefined>):
 function matches(
   job: Job,
   f: Filters,
-  except?: 'type' | 'term' | 'category' | 'location' | 'remote',
+  except?: 'type' | 'term' | 'category' | 'location' | 'remote' | 'campus',
 ): boolean {
   if (except !== 'type' && job.type !== f.type) return false;
   // Text first: it's the cheapest way to reject a row and the most selective.
   for (const w of f.words) if (!job.search.includes(w)) return false;
+  if (except !== 'campus' && f.campus && !isCampusFit(job)) return false;
   if (except !== 'remote' && f.remote && !job.isRemote) return false;
   if (except !== 'term' && f.terms.size > 0 && !job.terms.some((t) => f.terms.has(t)))
     return false;
@@ -88,6 +101,12 @@ export function typeCounts(jobs: Job[], f: Filters): Record<JobType, number> {
 export function remoteCount(jobs: Job[], f: Filters): number {
   let n = 0;
   for (const j of jobs) if (j.isRemote && matches(j, f, 'remote')) n++;
+  return n;
+}
+
+export function campusCount(jobs: Job[], f: Filters): number {
+  let n = 0;
+  for (const j of jobs) if (isCampusFit(j) && matches(j, f, 'campus')) n++;
   return n;
 }
 

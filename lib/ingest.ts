@@ -22,9 +22,9 @@ import { SAMPLE_LISTINGS } from './sample-data';
 
 const SOURCES: { url: string; type: JobType; name: string }[] = [
   {
-    name: 'Summer2026-Internships',
+    name: 'Summer2027-Internships',
     type: 'internship',
-    url: 'https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/.github/scripts/listings.json',
+    url: 'https://raw.githubusercontent.com/SimplifyJobs/Summer2027-Internships/dev/.github/scripts/listings.json',
   },
   {
     name: 'New-Grad-Positions',
@@ -49,6 +49,11 @@ const SOURCES: { url: string; type: JobType; name: string }[] = [
     url: 'https://raw.githubusercontent.com/vanshb03/Summer2026-Internships/dev/.github/scripts/listings.json',
   },
 ];
+
+type Source = (typeof SOURCES)[number];
+type SourceResult =
+  | { src: Source; rows: RawListing[] }
+  | { src: Source; error: unknown };
 
 export interface SourceRun {
   name: string;
@@ -98,8 +103,10 @@ function toJob(raw: RawListing, type: JobType): Job {
 
 async function fetchSource(url: string): Promise<RawListing[]> {
   const res = await fetch(url, {
-    // Cache the 11MB payload; the source updates a few times a day.
-    next: { revalidate: 3600 },
+    // These decoded responses are now well over Next's 2MB data-cache limit.
+    // Trying to cache them only emits an error; the normalized module cache
+    // below owns the one-hour lifetime instead.
+    cache: 'no-store',
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return (await res.json()) as RawListing[];
@@ -107,6 +114,7 @@ async function fetchSource(url: string): Promise<RawListing[]> {
 
 let cached: Feed | null = null;
 let cachedAt = 0;
+let pending: Promise<Feed> | null = null;
 const TTL_MS = 60 * 60 * 1000;
 
 // Is the feed already in memory? Callers use this to decide whether rendering
@@ -119,14 +127,43 @@ export function isFeedFresh(): boolean {
 export async function getFeed(): Promise<Feed> {
   if (cached && Date.now() - cachedAt < TTL_MS) return cached;
 
+  // MastheadMeta and Board render concurrently on a cold request, and both
+  // need the same feed. Share the in-flight refresh so one page load downloads
+  // and decodes the three large source files once instead of doing the whole
+  // ingestion twice before either call can populate `cached`.
+  if (pending) return pending;
+  pending = refreshFeed();
+  try {
+    return await pending;
+  } finally {
+    pending = null;
+  }
+}
+
+async function refreshFeed(): Promise<Feed> {
+
   const runs: SourceRun[] = [];
   const seen = new Set<string>();
   const jobs: Job[] = [];
   let anyOk = false;
 
-  for (const src of SOURCES) {
-    try {
-      const rows = await fetchSource(src.url);
+  // Network time dominates a cold request. Fetch every independent source at
+  // once, then normalize them in declared order so cross-source dedup remains
+  // deterministic (the primary Simplify feed still wins).
+  const results: SourceResult[] = await Promise.all(
+    SOURCES.map(async (src) => {
+      try {
+        return { src, rows: await fetchSource(src.url) };
+      } catch (error) {
+        return { src, error };
+      }
+    }),
+  );
+
+  for (const result of results) {
+    const { src } = result;
+    if ('rows' in result) {
+      const rows = result.rows;
       // Finding 1: filter active && is_visible at parse time.
       const active = rows.filter((r) => r.active && r.is_visible);
       let inserted = 0;
@@ -147,7 +184,7 @@ export async function getFeed(): Promise<Feed> {
         inserted,
       });
       anyOk = true;
-    } catch (err) {
+    } else {
       runs.push({
         name: src.name,
         host: 'aggregator',
@@ -155,7 +192,10 @@ export async function getFeed(): Promise<Feed> {
         fetched: 0,
         active: 0,
         inserted: 0,
-        error: err instanceof Error ? err.message : String(err),
+        error:
+          result.error instanceof Error
+            ? result.error.message
+            : String(result.error),
       });
     }
   }

@@ -1,11 +1,14 @@
 import type { Metadata } from 'next';
 import { Analytics } from '@vercel/analytics/next';
+import '@fontsource-variable/bricolage-grotesque';
+import '@fontsource-variable/instrument-sans';
+import '@fontsource-variable/jetbrains-mono';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'OpenRoles — internship & new-grad board',
+  title: 'OpenRoles — catch the opening, not the recap',
   description:
-    'A scanning surface for internship and new-grad postings. Age is the only thing that gets color.',
+    'Fresh internship and new-grad roles, with a Seattle + remote launchpad for UW students.',
 };
 
 export default function RootLayout({
