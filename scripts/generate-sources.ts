@@ -10,7 +10,7 @@ import type { RawListing } from '../lib/types.ts';
 
 const FEEDS: { url: string; key: 'active_intern' | 'active_newgrad' }[] = [
   {
-    url: 'https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/.github/scripts/listings.json',
+    url: 'https://raw.githubusercontent.com/SimplifyJobs/Summer2027-Internships/dev/.github/scripts/listings.json',
     key: 'active_intern',
   },
   {

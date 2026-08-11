@@ -77,6 +77,25 @@ export default async function BoardPage({
         )}
       </header>
 
+      <section className="intro" aria-labelledby="intro-title">
+        <div className="intro__copy">
+          <span className="eyebrow">Internships · new grad · updated hourly</span>
+          <h1 id="intro-title">Catch the opening, not the recap.</h1>
+          <p>
+            A fast, honest board for early-career roles. Fresh postings rise to
+            the top, every filter is shareable, and the application link is
+            always one click away.
+          </p>
+        </div>
+        <div className="intro__note" aria-label="How OpenRoles ranks jobs">
+          <span className="intro__note-index">01</span>
+          <p>
+            The green rail is time. Brighter means newer; quiet means the window
+            has been open longer.
+          </p>
+        </div>
+      </section>
+
       {cold ? <Suspense fallback={<BoardSkeleton />}>{board}</Suspense> : board}
     </main>
   );
@@ -100,6 +119,9 @@ async function MastheadMeta() {
 
 async function Board({ sp }: { sp: SP }) {
   const { jobs, runs, lastRunAt } = await getFeed();
+  // This timestamp is intentionally taken once per server render so every card
+  // on the page uses the same age boundary.
+  // eslint-disable-next-line react-hooks/purity
   const now = Math.floor(Date.now() / 1000);
 
   const filters = parseFilters(sp);
@@ -125,7 +147,7 @@ async function Board({ sp }: { sp: SP }) {
       <FilterBar jobs={jobs} filters={filters} sp={sp} />
       <ActiveFilterSummary filters={filters} sp={sp} />
 
-      <div className="gridhead">
+      <div className="gridhead" id="roles">
         <span className="eyebrow">
           {TYPE_LABEL[filters.type]} · newest first
         </span>

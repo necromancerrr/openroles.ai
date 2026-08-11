@@ -8,6 +8,7 @@ import type { Category } from '@/lib/types';
 import {
   removeHref,
   clearQueryHref,
+  clearFiltersHref,
   toggleFlagHref,
   type SP,
 } from '@/lib/url';
@@ -36,6 +37,12 @@ export function ActiveFilterPills({ filters, sp }: { filters: Filters; sp: SP })
     });
   if (filters.remote)
     pills.push({ id: 'remote', label: 'Remote', href: toggleFlagHref(sp, 'remote') });
+  if (filters.campus)
+    pills.push({
+      id: 'campus',
+      label: 'Seattle + remote',
+      href: toggleFlagHref(sp, 'campus'),
+    });
   for (const l of filters.locations)
     pills.push({
       id: `loc:${l}`,
@@ -68,7 +75,8 @@ export function hasActiveFilters(filters: Filters): boolean {
       filters.categories.size +
       filters.locations.size +
       (filters.query ? 1 : 0) +
-      (filters.remote ? 1 : 0) >
+      (filters.remote ? 1 : 0) +
+      (filters.campus ? 1 : 0) >
     0
   );
 }
@@ -79,7 +87,7 @@ export function ActiveFilterSummary({ filters, sp }: { filters: Filters; sp: SP 
     <div className="activefilters">
       <span className="eyebrow">Active</span>
       <ActiveFilterPills filters={filters} sp={sp} />
-      <Link className="activefilters__clear" href="/">
+      <Link className="activefilters__clear" href={clearFiltersHref(sp)}>
         Clear all
       </Link>
     </div>

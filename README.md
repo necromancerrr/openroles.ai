@@ -15,7 +15,7 @@ README as a snapshot, not a constant:
 
 | Source | Type | Active | Inserted after dedup |
 |---|---|---|---|
-| `SimplifyJobs/Summer2026-Internships` | internship | 1,451 | 1,451 |
+| `SimplifyJobs/Summer2027-Internships` | internship | 1,451 | 1,451 |
 | `SimplifyJobs/New-Grad-Positions` | new grad | 2,492 | 2,492 |
 | `vanshb03/Summer2026-Internships` | internship | 248 | 222 |
 

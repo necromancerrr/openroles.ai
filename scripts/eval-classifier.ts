@@ -29,7 +29,7 @@ const FEEDS: { url: string; label: Label; cache: string }[] = [
   {
     label: 'internship',
     cache: '.eval-cache/internships.json',
-    url: 'https://raw.githubusercontent.com/SimplifyJobs/Summer2026-Internships/dev/.github/scripts/listings.json',
+    url: 'https://raw.githubusercontent.com/SimplifyJobs/Summer2027-Internships/dev/.github/scripts/listings.json',
   },
   {
     label: 'new_grad',

@@ -95,6 +95,18 @@ export function clearQueryHref(sp: SP): string {
   return build(copy);
 }
 
+// Clear narrowing filters without throwing the reader back to the internship
+// tab or changing their chosen density. Type and density are view state, not
+// filters.
+export function clearFiltersHref(sp: SP): string {
+  const copy: SP = {};
+  const type = Array.isArray(sp.type) ? sp.type[0] : sp.type;
+  const density = Array.isArray(sp.d) ? sp.d[0] : sp.d;
+  if (type === 'new_grad' || type === 'unknown') copy.type = type;
+  if (density === 'compact') copy.d = density;
+  return build(copy);
+}
+
 // --- Paging (`n` = how many cards to render) ------------------------------
 // The board is 1.4k+ postings deep. Rendering all of them costs megabytes of
 // markup and RSC payload for a surface nobody scrolls past the first screen of,
@@ -119,5 +131,3 @@ export function moreHref(sp: SP, shown: number): string {
 export function removeHref(sp: SP, key: string, value: string): string {
   return toggleHref(sp, key, value);
 }
-
-export const clearAllHref = '/';

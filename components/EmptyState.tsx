@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Filters } from '@/lib/filter';
 import { ActiveFilterPills, hasActiveFilters } from './ActiveFilters';
 import type { SP } from '@/lib/url';
+import { clearFiltersHref } from '@/lib/url';
 
 export function EmptyState({
   filters,
@@ -29,7 +30,7 @@ export function EmptyState({
           <div className="eyebrow">Remove a filter to widen the search</div>
           <div className="empty__filters">
             <ActiveFilterPills filters={filters} sp={sp} />
-            <Link className="activefilters__clear" href="/">
+            <Link className="activefilters__clear" href={clearFiltersHref(sp)}>
               Clear all
             </Link>
           </div>
