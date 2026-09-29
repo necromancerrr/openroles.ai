@@ -6,47 +6,118 @@ time pressure: the subject isn't "jobs," it's *windows closing*. So **age is the
 primary visual variable, and it's the only thing in the interface that gets
 color** — the decay rail on each card's leading edge.
 
-The app ingests three live aggregator feeds, normalizes them into one canonical
-taxonomy, dedups by canonical URL, and renders the board as a Server Component
-with all filter state in the URL.
+Live at **https://openroles-ai.vercel.app**. It merges five public job feeds
+into one board, normalizes them into one taxonomy, dedups across them, and
+renders the board as a Server Component with every filter in the URL.
 
-Measured 2026-08-03 — the feeds turn over daily, so treat every count in this
-README as a snapshot, not a constant:
+## What a reader gets
 
-| Source | Type | Active | Inserted after dedup |
-|---|---|---|---|
-| `SimplifyJobs/Summer2027-Internships` | internship | 1,451 | 1,451 |
-| `SimplifyJobs/New-Grad-Positions` | new grad | 2,492 | 2,492 |
-| `vanshb03/Summer2026-Internships` | internship | 248 | 222 |
+- **Newest first, age as color.** The rail drains from green to a hairline as a
+  posting ages; `NEW` marks the last 24 hours (§4.1, §5.1).
+- **What's new since your last visit.** A returning reader sees one line — *"51
+  new internship postings since your last visit, 20h ago"* — instead of the
+  introduction, a rule across the grid where "new" ends, and a *Show only these*
+  toggle (`?new=1`). One first-party cookie holds two timestamps; see
+  `lib/visit.ts`.
+- **Opened memory.** Cards you've opened are marked like read mail, with *Hide
+  opened* to clear them away. Stored in the browser only (localStorage), keyed by
+  canonical URL so it survives feed refreshes (`components/BoardMemory.tsx`).
+- **Pay and visa sponsorship on the card**, when a source states them — pay on
+  ~1,300 postings, sponsorship on ~330. *I need sponsorship* (`?visa=1`) hides
+  postings that say they won't sponsor or require US citizenship; postings that
+  don't say stay, because silence isn't a "no".
+- **UW launchpad** (`?campus=1`): the Seattle corridor — anchored to WA, so
+  Bellevue, NE and Kirkland, QC don't count — plus US-remote roles.
+- **Keyboard:** `/` search, `j` / `k` move between cards, `Enter` opens.
+- **Phone-first filters:** on a narrow screen the facet rows fold behind *More
+  filters*, so the first job is one scroll away instead of three.
+- **RSS for any view:** `/feed.xml` takes the board's own URL params, so
+  "Seattle + remote Summer 2027 internships" is a feed you can put in a reader,
+  Slack or Discord. **JSON for any view:** `/api/jobs` (same params, plus
+  `limit` / `offset`).
 
-The third feed was added because it measurably differs rather than duplicates:
-222 of its 248 active rows aren't in the SimplifyJobs internship feed, and 40%
-of those were posted inside 7 days against 9% for SimplifyJobs — a freshness gain
-at the head of the board, which is the thing this surface exists to show. It also
-has a staler tail (19% older than 6 months vs 7%), which the decay rail handles
-on its own: those rows sort to the bottom and read as unrailed.
+## Sources
 
-Its two schema gaps are surfaced rather than papered over. Rows carry no
-`category`, so they normalize to `Other` and can't be category-filtered. And
-`season` is bare — `"Summer"`, `"Fall"`, no year — which isn't inferable from the
-repo name either, since these repos carry off-season rows (§2.2), so those rows
-read `Unspecified` instead of being assigned a term nobody stated.
+Declared in `lib/sources.ts`, one adapter per format. Measured 2026-09-29 —
+the feeds turn over daily, so treat every count here as a snapshot:
 
-`/status` reports fetched / active / inserted per source, so a feed going quiet is
-visible rather than silently missing.
+| Source | Tier | Rows | Live | Added to board | Enriched |
+|---|---|---|---|---|---|
+| [`SimplifyJobs/Summer2027-Internships`](https://github.com/SimplifyJobs/Summer2027-Internships) | primary | 16,966 | 4,342 | 4,342 | — |
+| [`SimplifyJobs/New-Grad-Positions`](https://github.com/SimplifyJobs/New-Grad-Positions) | primary | 19,669 | 2,994 | 2,993 | — |
+| [`zshah101/…Tech-Internships`](https://github.com/zshah101/Automated-List-Of-Summer-2027-and-Fall-2026-Tech-Internships) (CSV) | secondary | 1,061 | 1,061 | 415 | 253 |
+| [`WonOfAKind/New-Grad-And-Internships-2027`](https://github.com/WonOfAKind/New-Grad-And-Internships-2027) | secondary | 3,090 | 2,598 | 1,175 | 411 |
+| [`vanshb03/Summer2027-Internships`](https://github.com/vanshb03/Summer2027-Internships) | secondary | 471 | 371 | *withheld* | — |
+
+**8,925 postings** — 5,645 internships, 3,280 new grad. Simplify's repo was
+renamed from `Summer2026-Internships`; the old URL still redirects, but the
+canonical one is used so a future repo under the old name can't hijack it.
+
+**Why these two were added.** Each was measured against Simplify before it went
+in — a feed earns its place by what it adds, not what it repeats. zshah101
+scrapes employer boards every 30 minutes and carries sponsorship, pay and exact
+timestamps; WonOfAKind carries explicit new-grad/intern labels and ~1,000
+mechanical, aerospace and manufacturing roles Simplify never lists (hence the
+`engineering` category, *Other engineering* on screen). Together they add 25
+postings from the last 24 hours to Simplify's 57, and 281 from the last week to
+its 550. [ApplyGuy](https://github.com/ApplyGuy/2027-New-Grad-Jobs) was measured
+and left out: its company names are derived from URL slugs
+("Bristolmyerssquibb") and would read as broken on a card.
+
+**Merging.** Declared order is priority: the first feed to list a posting owns
+its fields, and a later feed listing it again can only fill gaps (pay,
+sponsorship — the *Enriched* column). Primary rows dedup by canonical URL only.
+Secondary rows also dedup on company + title + a shared place, because
+scrapers reach the same posting through different URLs (a company's careers
+page and its Greenhouse board). Canonical URLs now also collapse Lever
+`/apply`, Ashby `/application`, Workday locale segments and requisition slugs,
+and iCIMS / SmartRecruiters title slugs (`lib/canonical.ts`).
+
+**Locations** from secondary feeds are mapped *into* Simplify's vocabulary
+(§2.4): *"San Jose, California, United States of America"* → `San Jose, CA`,
+*"USA LA Bossier City"* → `Bossier City, LA`, *"Remote (US)"* → `Remote in
+USA`. 36% of their location strings matched Simplify's raw; 85.7% do after
+`lib/location.ts`. The rest are correctly formatted towns Simplify doesn't list.
+
+**Staleness.** A feed whose own newest update is more than three weeks old is
+withheld: its "active" flags are no longer maintained, so it would be serving
+closed postings. vanshb03 stopped updating on 2026-08-23 and is withheld today;
+it comes back by itself the day it moves. `/status` shows every feed's last
+update, newest posting, and the reason for anything withheld.
+
+## How it serves
+
+A request never waits on the network when there is anything to show:
+
+1. **Build.** `prebuild` runs `npm run snapshot` — the same ingest code the
+   server runs — and writes `.snapshot/feed.json` (~4.5 MB, gitignored).
+   `next.config.mjs` traces it into every server function.
+2. **Fresh instance.** Answers from the snapshot immediately (measured: 0.10s
+   for the full board on a just-started server, vs. downloading ~45 MB first).
+3. **Warm instance.** Answers from memory. Once the feed is an hour old, the
+   next request is answered from it and the refresh runs *after* the response
+   (`after()`), with every feed fetched in parallel under a 30s timeout.
+4. **A feed fails.** Its postings from the last good run stay on the board, the
+   banner says so, and the next attempt comes in 5 minutes instead of 60.
+
+Only a process with no snapshot and no cache — `next dev` before any build —
+blocks, behind the board skeleton.
 
 ## Run it
 
 ```bash
 npm install
+npm run snapshot   # optional: build .snapshot/feed.json so dev starts instantly
 npm run dev        # http://localhost:3000
+
+npm test           # node:test over lib/*.test.ts — ingest merge rules, dedup,
+                   # locations, pay, visits, filters
+npm run lint
+npm run typecheck
 ```
 
-The first request downloads all three `listings.json` files (~1.6 MB gzipped,
-~23 MB decoded), filters to
-`active && is_visible` at parse time, and caches for an hour. If the network is
-unavailable it falls back to a bundled sample fixture and the SystemBanner says
-so. `/status` shows the fetch runs and host breakdown.
+If no feed is reachable the board falls back to a bundled sample fixture and
+the SystemBanner says so in words.
 
 Regenerate the verified-boards artifact from where the live postings actually
 are (§7):
@@ -54,6 +125,12 @@ are (§7):
 ```bash
 npm run ingest:sources   # writes sources.verified.json
 ```
+
+## Deploying
+
+Vercel project `openroles-ai`. `npm run build` runs `prebuild` first (snapshot,
+then logos), so every deploy ships current data and artwork; neither step can
+fail a deploy. The repository's default branch is the production branch.
 
 ## Company logos
 
@@ -72,9 +149,11 @@ npm run fetch:logos -- --top=600
 ```
 
 This is the §7 pattern applied to images: do the work ahead of time, keep the
-artifact, depend on nobody at render time. It ranks domains by how many postings
-ride on each — so a bounded run covers the most cards rather than an arbitrary
-slice of the alphabet — fetches each company's own favicon, writes
+artifact, depend on nobody at render time. It reads the postings from the board's
+own snapshot — every source, already deduped, so logos follow the source list
+without a copy of it (1,847 domains on 2026-09-29) — ranks domains by how many
+postings ride on each — so a bounded run covers the most cards rather than an
+arbitrary slice of the alphabet — fetches each company's own favicon, writes
 `public/logos/<domain>.<ext>`, and regenerates `lib/logo-manifest.ts`. After that
 the cards load logos from **this app's own origin**: no third-party request when a
 card paints, nothing to rate-limit, nothing that can start returning a globe or
@@ -231,29 +310,30 @@ isn't one this harness can confirm.
 
 | Design doc | Where it lives |
 |---|---|
-| §1 finding 1 — filter `active && is_visible` at parse time | `lib/ingest.ts` |
-| §1 finding 4 — aggregator is primary, ATS is the freshness layer | `lib/ingest.ts`, host buckets in `lib/canonical.ts` |
+| §1 finding 1 — filter `active && is_visible` at parse time | `lib/sources.ts` (each adapter keeps only what its feed calls live) |
+| §1 finding 4 — aggregator is primary, scraped feeds are the freshness layer | `lib/sources.ts` (primary / secondary tiers), `lib/ingest.ts` (merge) |
 | §1 finding 5 — internship classifier only, never a new-grad one | `lib/classify.ts` (type comes from repo-of-origin here) |
 | addendum §5 — eval harness on the labeled feeds, recorded and re-runnable | `scripts/eval-classifier.ts`, `eval/type-classifier.json` |
 | §7 pattern — work the mapping out once, check the table in | `lib/logo-overrides.ts`, `scripts/audit-logo-domains.ts` |
 | §7 pattern — fetch logos once offline, serve them from our own origin | `scripts/fetch-logos.ts`, `lib/logo-manifest.ts` |
 | §2.1 — normalize `category`, **fail loudly** on unseen values | `lib/taxonomy.ts` (`unseenCategories`) |
 | §2.2 — `terms` parsed not table-mapped, ordered by start date, open terms first | `lib/taxonomy.ts` (`parseTerm`, `termChipOrder`, `primaryTerm`) |
-| §2.3 — drop `sponsorship`/`degrees` from the UI | not surfaced |
-| §2.4 — adopt Simplify's location vocabulary; chips + type-ahead | `components/FilterBar.tsx`, `LocationTypeahead.tsx` |
+| §2.3 — drop `sponsorship`/`degrees` from the UI | `degrees` still not surfaced; **sponsorship reinstated** now that feeds state it on ~330 rows — tag on the card, `?visa=1` filter |
+| §2.4 — adopt Simplify's location vocabulary; chips + type-ahead | `lib/location.ts` maps other feeds into it; `components/FilterBar.tsx`, `LocationTypeahead.tsx` |
 | §2.5 — canonical enums | `lib/types.ts` |
-| §3 — URL canonicalization by **allowlist**, not blocklist | `lib/canonical.ts` |
+| §3 — URL canonicalization by **allowlist**, not blocklist; two-layer dedup | `lib/canonical.ts` (+ per-ATS path rules), `lib/ingest.ts` (company + title + place) |
 | §4.2 — the token set, verbatim | `app/globals.css` |
 | §5.1 — JobCard: decay rail + redundant age text + one link/tab stop | `components/JobCard.tsx`, `lib/age.ts` |
 | §5.1 — company mark: monogram, logo layered over it when configured | `components/CompanyMark.tsx`, `lib/logo.ts` |
 | §5.1 — grid depth: 120-card window, `?n=` grows it, `content-visibility` below the fold | `app/page.tsx`, `lib/url.ts`, `app/globals.css` |
 | §5.2 — Chip with mandatory server-side counts, zero-count disabled | `components/Chip.tsx`, `lib/filter.ts` |
-| §5.3 — SystemBanner (stale / partial / empty), not dismissible | `components/SystemBanner.tsx` |
+| §5.3 — SystemBanner (stale / partial / empty / sample), not dismissible | `components/SystemBanner.tsx` |
 | §5.4 — FilterBar, narrowest-to-widest, state in URL params | `components/FilterBar.tsx`, `lib/url.ts` |
 | §5.4 — search as a plain GET form (no client island), Remote-only chip, density control | `components/SearchBox.tsx`, `components/FilterBar.tsx`, `app/page.tsx` |
-| §5.1 — skeleton shown only when the feed is cold, never on a warm 30ms render | `components/BoardSkeleton.tsx`, `lib/ingest.ts` (`isFeedFresh`) |
+| §5.1 — skeleton only when there's truly nothing to show; build snapshot + refresh after response | `components/BoardSkeleton.tsx`, `lib/ingest.ts` (`hasFeed`, `getFeed`), `scripts/build-snapshot.ts` |
 | §5.5 — EmptyState names the specific filters | `components/EmptyState.tsx` |
-| §5.6 — StatusPage reads fetch runs | `app/status/page.tsx` |
+| §5.6 — StatusPage reads fetch runs, per-feed freshness, withheld feeds and why | `app/status/page.tsx` |
+| §4.1 — "what's new since yesterday", per reader | `lib/visit.ts`, `app/page.tsx` (welcome line, grid rule), `components/BoardMemory.tsx` |
 
 ## Decisions taken from §8's open questions
 
@@ -269,6 +349,9 @@ isn't one this harness can confirm.
 
 ## Stack
 
-Next.js 15 (App Router, Server Components) · React 19 · TypeScript. No client
-state beyond the location type-ahead island; filters are URL search params, so
-links are shareable and back/forward just works.
+Next.js 16 (App Router, Server Components) · React 19 · TypeScript. Two small
+client islands — the location type-ahead and `BoardMemory` (visit cookie,
+opened memory, keyboard) — and nothing else; filters are URL search params, so
+links are shareable and back/forward just works. Fonts are self-hosted
+(`@fontsource-variable`); note the packages register their families with a
+`Variable` suffix, which the tokens in `app/globals.css` must name.

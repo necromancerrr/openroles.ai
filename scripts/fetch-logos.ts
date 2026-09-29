@@ -19,16 +19,38 @@ import { resolveLogoDomain, type DomainSource } from '../lib/logo.ts';
 import { canonicalKey } from '../lib/canonical.ts';
 import type { RawListing } from '../lib/types.ts';
 
-const FEEDS = [
-  '.eval-cache/internships.json',
-  '.eval-cache/new-grad.json',
-  '.eval-cache/vanshb03.json',
-];
+// The board's own snapshot is the list of postings to cover — it holds every
+// source the board reads, already deduped, so logos track the sources without
+// this script keeping a copy of the feed list. `prebuild` writes it first.
+const SNAPSHOT = '.snapshot/feed.json';
+
+// Fallback when there's no snapshot (running this by hand before any build):
+// the two primary feeds, cached for the eval scripts.
+const FEEDS = ['.eval-cache/internships.json', '.eval-cache/new-grad.json'];
 const FEED_URLS = [
   'https://raw.githubusercontent.com/SimplifyJobs/Summer2027-Internships/dev/.github/scripts/listings.json',
   'https://raw.githubusercontent.com/SimplifyJobs/New-Grad-Positions/dev/.github/scripts/listings.json',
-  'https://raw.githubusercontent.com/vanshb03/Summer2026-Internships/dev/.github/scripts/listings.json',
 ];
+
+// Every live posting's apply URL and company, from the snapshot if there is one.
+async function loadPostings(): Promise<{ url: string; company: string }[]> {
+  try {
+    const snap = JSON.parse(await readFile(SNAPSHOT, 'utf8')) as {
+      feed: { jobs: { url: string; company: string }[] };
+    };
+    if (Array.isArray(snap.feed?.jobs) && snap.feed.jobs.length > 0) {
+      console.log(`\n  ranking domains from ${SNAPSHOT}`);
+      return snap.feed.jobs;
+    }
+  } catch {
+    /* no snapshot — fall back to the feeds */
+  }
+  const feeds = await Promise.all(FEEDS.map((c, i) => loadFeed(c, FEED_URLS[i])));
+  return feeds
+    .flat()
+    .filter((r) => r.active && r.is_visible)
+    .map((r) => ({ url: r.url, company: r.company_name }));
+}
 
 const OUT_DIR = 'public/logos';
 const MANIFEST = 'lib/logo-manifest.ts';
@@ -164,9 +186,9 @@ async function main() {
   const sourceOf = new Map<string, DomainSource>();
   const seen = new Set<string>();
   let totalPostings = 0;
-  let feeds: RawListing[][];
+  let postings: { url: string; company: string }[];
   try {
-    feeds = await Promise.all(FEEDS.map((c, i) => loadFeed(c, FEED_URLS[i])));
+    postings = await loadPostings();
   } catch (err) {
     // This runs as `prebuild`, so it must never take a deploy down. No feed
     // means no ranking, which means nothing to fetch — leave whatever logos are
@@ -177,18 +199,15 @@ async function main() {
     );
     return;
   }
-  for (let i = 0; i < feeds.length; i++) {
-    for (const r of feeds[i]) {
-      if (!(r.active && r.is_visible)) continue;
-      const key = canonicalKey(r.url);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      totalPostings++;
-      const resolved = resolveLogoDomain(r.url, r.company_name);
-      if (resolved) {
-        byDomain.set(resolved.domain, (byDomain.get(resolved.domain) ?? 0) + 1);
-        sourceOf.set(resolved.domain, resolved.source);
-      }
+  for (const p of postings) {
+    const key = canonicalKey(p.url);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    totalPostings++;
+    const resolved = resolveLogoDomain(p.url, p.company);
+    if (resolved) {
+      byDomain.set(resolved.domain, (byDomain.get(resolved.domain) ?? 0) + 1);
+      sourceOf.set(resolved.domain, resolved.source);
     }
   }
 

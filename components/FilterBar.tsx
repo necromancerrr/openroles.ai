@@ -1,14 +1,26 @@
 // FilterBar — §5.4. Narrowest-to-widest, top to bottom:
 //   1. Type  — segmented (Internships · New grad · Unclassified)
 //   2. Term  — chips, internships only (row disappears on other tabs)
-//   3. Category — chips, six canonical values
+//   3. Category — chips, seven canonical values
 //   4. Location — top ~12 chips + type-ahead for the tail
+//   5. Visa — "I need sponsorship", which hides postings that say they won't
 // All counts are computed server-side from the current filter state (§5.2).
+//
+// On a phone, rows 2–5 fold behind a "More filters" toggle: unfolded, they are
+// two screens of chips before the first job. The toggle is a checkbox and a
+// sibling selector — no client JS, no layout shift, and the desktop layout
+// never sees it.
 
 import Link from 'next/link';
 import type { Job, Category, Term, JobType } from '@/lib/types';
 import type { Filters } from '@/lib/filter';
-import { typeCounts, facetCounts, remoteCount, campusCount } from '@/lib/filter';
+import {
+  typeCounts,
+  facetCounts,
+  remoteCount,
+  campusCount,
+  visaCounts,
+} from '@/lib/filter';
 import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
@@ -44,11 +56,24 @@ export function FilterBar({
   const tCounts = typeCounts(jobs, filters);
 
   const termCounts = facetCounts<Term>(jobs, filters, 'term', (j) => j.terms);
-  // The chip row is drawn from every term in the feed, not just the ones with
-  // results right now: §5.2 wants a zero-count chip disabled in place, not gone,
-  // so the row doesn't reshuffle under the reader as they filter.
-  const allTerms = new Set<Term>();
-  for (const j of jobs) for (const t of j.terms) allTerms.add(t);
+  // The chip row is drawn from every term in this tab's feed, not just the
+  // ones with results right now: §5.2 wants a zero-count chip disabled in
+  // place, not gone, so the row doesn't reshuffle under the reader as they
+  // filter. A term with only a handful of postings in the whole feed gets no
+  // chip, though — the scraped feeds carry stray far-off terms ("Winter 2029",
+  // one posting) that turned one row into two on a laptop and seven on a phone.
+  // Those postings stay on the board; a selected term always keeps its chip.
+  const MIN_TERM_POSTINGS = 20;
+  const termTotals = new Map<Term, number>();
+  for (const j of jobs) {
+    if (j.type !== filters.type) continue;
+    for (const t of j.terms) termTotals.set(t, (termTotals.get(t) ?? 0) + 1);
+  }
+  const allTerms = new Set<Term>(
+    [...termTotals]
+      .filter(([t, n]) => n >= MIN_TERM_POSTINGS || t === 'unspecified' || filters.terms.has(t))
+      .map(([t]) => t),
+  );
   const catCounts = facetCounts<Category>(jobs, filters, 'category', (j) => [j.category]);
   const locCounts = facetCounts<string>(jobs, filters, 'location', (j) => j.locSlugs);
 
@@ -73,6 +98,13 @@ export function FilterBar({
     .map(([label]) => label);
 
   const showTerms = filters.type === 'internship';
+  const visa = visaCounts(jobs, filters);
+  const facetsActive =
+    filters.terms.size +
+    filters.categories.size +
+    filters.locations.size +
+    (filters.remote ? 1 : 0) +
+    (filters.visa ? 1 : 0);
 
   return (
     <div className="filterbar">
@@ -107,6 +139,7 @@ export function FilterBar({
               key={tab.value}
               href={setTypeHref(sp, tab.value)}
               role="tab"
+              aria-selected={filters.type === tab.value}
               aria-current={filters.type === tab.value}
               scroll={false}
             >
@@ -117,6 +150,21 @@ export function FilterBar({
         </div>
       </div>
 
+      <input
+        type="checkbox"
+        id="facets-toggle"
+        className="facets-toggle__input"
+        aria-controls="facets"
+      />
+      <label htmlFor="facets-toggle" className="facets-toggle">
+        <span>More filters</span>
+        {facetsActive > 0 && <span className="count">{facetsActive} active</span>}
+        <span className="facets-toggle__chev" aria-hidden>
+          ▾
+        </span>
+      </label>
+
+      <div className="facets" id="facets">
       {/* 2. Term — internships only */}
       {showTerms && (
         <fieldset className="filterrow">
@@ -177,6 +225,27 @@ export function FilterBar({
           />
         )}
       </fieldset>
+
+      {/* 5. Visa. Silence isn't a "no", so only postings that state they
+          won't sponsor — or require citizenship — are hidden. The note says
+          how many that is, because it's a minority and the reader should know
+          the filter can't vouch for the rest. */}
+      <fieldset className="filterrow">
+        <legend>Visa sponsorship</legend>
+        <span className="filterrow__label" aria-hidden>Visa</span>
+        <Chip
+          label="I need sponsorship"
+          count={visa.kept}
+          selected={filters.visa}
+          href={toggleFlagHref(sp, 'visa')}
+        />
+        <span className="filterrow__note">
+          {filters.visa ? 'Hiding' : 'Hides'} {visa.excluded.toLocaleString()} posting
+          {visa.excluded === 1 ? '' : 's'} that say they won&apos;t sponsor or need US
+          citizenship. Most postings don&apos;t say either way.
+        </span>
+      </fieldset>
+      </div>
     </div>
   );
 }

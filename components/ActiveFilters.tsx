@@ -17,6 +17,12 @@ export function ActiveFilterPills({ filters, sp }: { filters: Filters; sp: SP })
   // Each pill carries the href that removes it — one link, one thing removed.
   const pills: { id: string; label: string; href: string }[] = [];
 
+  if (filters.newSince !== undefined)
+    pills.push({
+      id: 'new',
+      label: 'New since your last visit',
+      href: toggleFlagHref(sp, 'new'),
+    });
   if (filters.query)
     pills.push({
       id: 'q',
@@ -49,6 +55,12 @@ export function ActiveFilterPills({ filters, sp }: { filters: Filters; sp: SP })
       label: l.replace(/-/g, ' '),
       href: removeHref(sp, 'loc', l),
     });
+  if (filters.visa)
+    pills.push({
+      id: 'visa',
+      label: 'Needs sponsorship',
+      href: toggleFlagHref(sp, 'visa'),
+    });
 
   return (
     <>
@@ -76,7 +88,9 @@ export function hasActiveFilters(filters: Filters): boolean {
       filters.locations.size +
       (filters.query ? 1 : 0) +
       (filters.remote ? 1 : 0) +
-      (filters.campus ? 1 : 0) >
+      (filters.campus ? 1 : 0) +
+      (filters.visa ? 1 : 0) +
+      (filters.newSince !== undefined ? 1 : 0) >
     0
   );
 }

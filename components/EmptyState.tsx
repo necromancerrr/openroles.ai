@@ -23,7 +23,9 @@ export function EmptyState({
       <div className="empty__title">
         {filters.query
           ? `No ${typeLabel} postings match “${filters.query}”.`
-          : `No ${typeLabel} postings match these filters.`}
+          : filters.newSince !== undefined
+            ? `Nothing new in ${typeLabel} postings since your last visit.`
+            : `No ${typeLabel} postings match these filters.`}
       </div>
       {narrowed ? (
         <>

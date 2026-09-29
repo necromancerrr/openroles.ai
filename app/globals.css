@@ -26,9 +26,13 @@
   --warn-bg:      #FBF3E2;
 
   /* Type */
-  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
-  --font-ui:      'Instrument Sans', system-ui, sans-serif;
-  --font-data:    'JetBrains Mono', ui-monospace, monospace;
+  /* The self-hosted @fontsource-variable packages register their families
+     with a "Variable" suffix. Naming only the plain family — as these tokens
+     used to — matches nothing, so the browser never even downloads the files
+     and every page silently renders in the system fallback. */
+  --font-display: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', system-ui, sans-serif;
+  --font-ui:      'Instrument Sans Variable', 'Instrument Sans', system-ui, sans-serif;
+  --font-data:    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
 
   --t-display:    clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
   --t-title:      1.0625rem;
@@ -131,6 +135,31 @@ a { color: inherit; text-decoration: none; }
   font-size: var(--t-micro);
   color: var(--age-0);
 }
+.intro__notes { display: grid; gap: var(--s-4); }
+
+/* --- Welcome back ------------------------------------------------------- */
+/* The returning reader's version of the intro: one line, one number — what's
+   new since they were last here — and a way to see only that. */
+.welcome {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-4); flex-wrap: wrap;
+  padding: var(--s-6) 0 var(--s-5);
+  border-bottom: 1px solid var(--rule-strong);
+}
+.welcome__line { margin: 0; max-width: 760px; font-size: clamp(1.05rem, 1.6vw, 1.25rem); color: var(--ink-2); }
+.welcome__count {
+  font-family: var(--font-display); font-weight: 650;
+  font-size: clamp(2rem, 4vw, 2.75rem); letter-spacing: -0.04em; line-height: 1;
+  color: var(--ink); margin-right: 2px;
+}
+.welcome__cta {
+  flex: none; padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--ink); border-radius: var(--r-sm);
+  font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.welcome__cta:hover { background: var(--ink); color: var(--paper); }
+.welcome__cta:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* --- FilterBar ---------------------------------------------------------- */
 .filterbar { padding: var(--s-5) 0; border-bottom: 1px solid var(--rule); }
@@ -175,6 +204,12 @@ a { color: inherit; text-decoration: none; }
 }
 fieldset { border: 0; margin: 0; padding: 0; display: contents; }
 legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.filterrow__note { font-size: var(--t-meta); color: var(--ink-3); max-width: 540px; }
+
+/* "More filters" — exists only on narrow screens (see the media query). On
+   wide screens the facets are simply always there, and the checkbox isn't in
+   the tab order. */
+.facets-toggle__input, .facets-toggle { display: none; }
 
 /* Search — a plain GET form, so it needs no client JS (§5.4). */
 .search { display: flex; align-items: center; gap: var(--s-2); flex: 1; min-width: 220px; }
@@ -364,6 +399,53 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
   color: var(--ink-3); border: 1px solid var(--rule-strong); border-radius: 2px; padding: 0 4px;
 }
 
+/* Pay and stated sponsorship — measurements, so --font-data; neutral, because
+   age is the only thing that gets color (§4.2). Only present when a source
+   stated them. */
+.card__facts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin: calc(-1 * var(--s-1)) 0 var(--s-3); }
+.card__pay { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink); }
+.card__tag {
+  font-family: var(--font-data); font-size: var(--t-micro); letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink-2);
+  border: 1px solid var(--rule-strong); border-radius: 2px; padding: 0 4px;
+}
+
+/* The reader's own "opened" memory (components/BoardMemory.tsx). Muted like a
+   read message: still there, no longer asking for attention. */
+.card__opened {
+  display: none;
+  font-family: var(--font-data); font-size: var(--t-micro);
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3);
+}
+.card[data-opened] .card__opened { display: inline; }
+.card[data-opened] .card__company,
+.card[data-opened] .card__title { color: var(--ink-2); }
+.grid[data-hide-opened] .card[data-opened] { display: none; }
+
+.hidetoggle {
+  display: inline-flex; align-items: center; gap: var(--s-2);
+  padding: 2px var(--s-2);
+  border: 1px solid var(--rule-strong); border-radius: var(--r-md);
+  background: transparent; color: var(--ink-2); cursor: pointer;
+  font-family: var(--font-data); font-size: var(--t-micro);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.hidetoggle:hover { border-color: var(--ink-2); }
+.hidetoggle[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.hidetoggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.hidetoggle .count { opacity: 0.7; }
+
+/* Where the reader's "new since last visit" ends. Spans the whole row. */
+.grid__since {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: var(--s-2);
+  margin: 0 -1px -1px 0; padding: var(--s-2) var(--s-4);
+  border: 1px solid var(--rule); border-top: 2px solid var(--ink);
+  background: var(--paper);
+  font-family: var(--font-data); font-size: var(--t-micro);
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2);
+}
+
 /* --- Grid footer / paging ----------------------------------------------- */
 .gridfoot {
   display: flex; align-items: center; justify-content: space-between;
@@ -378,6 +460,17 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
 }
 .showmore:hover { border-color: var(--ink-2); background: var(--surface); }
 .showmore:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.gridfoot__aside { margin-left: auto; display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+.kbdhint { font-family: var(--font-data); font-size: var(--t-micro); color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+kbd {
+  font-family: var(--font-data); font-size: var(--t-micro);
+  padding: 0 4px; border: 1px solid var(--rule-strong); border-bottom-width: 2px;
+  border-radius: 3px; background: var(--surface); color: var(--ink-2);
+}
+/* Touch screens have no j and k. */
+@media (hover: none) { .kbdhint { display: none; } }
+.feedlink { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-2); border-bottom: 1px solid var(--rule-strong); }
+.feedlink:hover { color: var(--ink); border-color: var(--ink-2); }
 
 /* Skeleton (loading) — same box and rule collapsing as a real card. */
 .skeleton {
@@ -403,13 +496,25 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
 .pill .x { color: var(--ink-3); }
 
 /* --- StatusPage --------------------------------------------------------- */
+.statusfacts { display: grid; gap: var(--s-4); padding-top: var(--s-5); }
+.statusfacts p { margin: 0; display: grid; gap: 2px; }
+.statusfacts .mono { font-size: var(--t-meta); color: var(--ink); }
+.statusfacts__note { font-size: var(--t-meta); color: var(--ink-3); }
+/* Wide tables scroll inside their own box on a phone instead of pushing the
+   whole page sideways. */
+.tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.statustable caption { text-align: left; padding-bottom: var(--s-2); }
+.statuslink { border-bottom: 1px solid var(--rule-strong); }
+.statuslink:hover { border-color: var(--ink-2); }
 .statustable { width: 100%; border-collapse: collapse; font-size: var(--t-meta); margin-top: var(--s-5); }
 .statustable th, .statustable td { padding: var(--s-3); border-bottom: 1px solid var(--rule); text-align: left; }
 .statustable th { font-family: var(--font-data); font-size: var(--t-micro); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); font-weight: 500; }
 .statustable td.num, .statustable th.num { font-family: var(--font-data); text-align: right; }
 .statustable .status-ok { color: var(--age-0); }
 .statustable .status-failed { color: var(--warn); }
-.statustable .status-skipped { color: var(--ink-3); }
+.statustable .status-stale { color: var(--ink-3); }
+.statustable td { white-space: nowrap; }
+.statustable td:first-child, .statustable td:last-child { white-space: normal; }
 
 .backlink { font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-3); }
 .backlink:hover { color: var(--ink-2); }
@@ -425,16 +530,41 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
   .campusbar { align-items: flex-start; flex-direction: column; }
   .campusbar__copy { align-items: flex-start; }
   .campusbar > .chip { width: 100%; justify-content: space-between; }
+  .welcome { flex-direction: column; align-items: flex-start; padding-top: var(--s-5); }
+  .gridfoot__aside { margin-left: 0; }
+
+  /* The facet rows fold behind one control; Search and Type stay out. */
+  .facets-toggle__input {
+    display: block; position: absolute; width: 1px; height: 1px;
+    opacity: 0; pointer-events: none;
+  }
+  .facets-toggle {
+    display: flex; align-items: center; gap: var(--s-2);
+    width: 100%; padding: var(--s-3);
+    border: 1px solid var(--rule-strong); border-radius: var(--r-sm);
+    background: var(--surface); cursor: pointer;
+    font-family: var(--font-data); font-size: var(--t-meta); color: var(--ink-2);
+  }
+  .facets-toggle .count { color: var(--ink); }
+  .facets-toggle__chev { margin-left: auto; transition: transform var(--dur-fast) var(--ease); }
+  .facets-toggle__input:checked + .facets-toggle .facets-toggle__chev { transform: rotate(180deg); }
+  .facets-toggle__input:focus-visible + .facets-toggle { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .facets-toggle__input:not(:checked) ~ .facets { display: none; }
+  .facets { padding-top: var(--s-4); }
+
   .filterrow { gap: var(--s-2); margin-bottom: var(--s-5); }
   .filterrow__label { width: 100%; }
   .search { width: 100%; }
   .search__input { max-width: none; }
   .gridhead { align-items: flex-start; }
-  .gridhead__right { width: 100%; justify-content: space-between; }
+  .gridhead__right { width: 100%; justify-content: space-between; flex-wrap: wrap; gap: var(--s-3); }
+  .gridhead__count { white-space: nowrap; }
 }
 
 @media (max-width: 28rem) {
   .campusbar__copy { flex-direction: column; gap: var(--s-3); }
-  .segmented { width: 100%; }
-  .segmented a { flex: 1; justify-content: center; padding-inline: var(--s-2); }
+  /* The Type tabs share the width; the small density control keeps its own
+     size, or it squeezes the posting count onto two lines beside it. */
+  .segmented:not(.segmented--sm) { width: 100%; }
+  .segmented:not(.segmented--sm) a { flex: 1; justify-content: center; padding-inline: var(--s-2); }
 }

@@ -1,22 +1,18 @@
 // SystemBanner — §5.3. One instance, above the grid. A statement of data
 // quality, deliberately not dismissible. Copy states what happened and what it
 // means for the data on screen. No apology, no exclamation mark.
+//
+// A feed withheld as stale (lib/ingest.ts) is not reported here: it's a
+// decision the system made, not a failure the reader should weigh, and /status
+// lists it with its reason.
 
-import type { SourceRun } from '@/lib/ingest';
+import type { Feed } from '@/lib/ingest';
 
-export function SystemBanner({
-  runs,
-  lastRunAt,
-  now,
-  totalJobs,
-}: {
-  runs: SourceRun[];
-  lastRunAt: number;
-  now: number;
-  totalJobs: number;
-}) {
+export function SystemBanner({ feed, now }: { feed: Feed; now: number }) {
+  const { runs, lastRunAt, origin, jobs } = feed;
+
   // `empty` — zero rows.
-  if (totalJobs === 0) {
+  if (jobs.length === 0) {
     return (
       <div className="banner" role="status" aria-live="polite">
         No postings yet — the fetcher hasn&apos;t run.
@@ -24,13 +20,26 @@ export function SystemBanner({
     );
   }
 
-  // `partial` — any source failed or was skipped.
-  const failed = runs.filter((r) => r.status === 'failed' || r.status === 'skipped');
-  if (failed.length > 0) {
+  // Nothing reachable, nothing carried: what's on screen is the fixture.
+  if (origin === 'sample') {
     return (
       <div className="banner" role="status" aria-live="polite">
-        Couldn&apos;t reach {failed.length} of {runs.length} sources. Showing
-        everything else.
+        Couldn&apos;t reach any source. These are sample postings, not live ones.
+      </div>
+    );
+  }
+
+  // `partial` — some feeds failed this run.
+  const counted = runs.filter((r) => r.status !== 'stale');
+  const failed = counted.filter((r) => r.status === 'failed');
+  if (failed.length > 0) {
+    const carried = failed.some((r) => r.carried);
+    return (
+      <div className="banner" role="status" aria-live="polite">
+        Couldn&apos;t reach {failed.length} of {counted.length} sources.{' '}
+        {carried
+          ? 'Their postings are from the last successful check.'
+          : 'Showing everything else.'}
       </div>
     );
   }

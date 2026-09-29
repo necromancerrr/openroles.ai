@@ -127,6 +127,19 @@ export function moreHref(sp: SP, shown: number): string {
   return build({ ...sp, n: String(shown + PAGE_SIZE) });
 }
 
+// The RSS feed for the current view (app/feed.xml/route.ts): same filters,
+// minus what only makes sense on screen — the paging window, the density, and
+// "new since your last visit", which depends on a cookie a feed reader doesn't
+// carry (its own unread tracking does that job there).
+export function feedHref(sp: SP): string {
+  const copy: SP = { ...sp };
+  delete copy.n;
+  delete copy.d;
+  delete copy.new;
+  const q = build(copy);
+  return q === '/' ? '/feed.xml' : `/feed.xml${q.slice(1)}`;
+}
+
 // Remove one value from a facet (active-filter pills).
 export function removeHref(sp: SP, key: string, value: string): string {
   return toggleHref(sp, key, value);

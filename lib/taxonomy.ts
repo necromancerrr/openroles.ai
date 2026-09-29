@@ -2,7 +2,15 @@
 // under multiple names; we normalize on ingest and FAIL LOUDLY on anything
 // unseen (§2.1) so a new category surfaces in logs instead of vanishing.
 
-import type { Category, Season, Term } from './types';
+import type { Category, Season, Sponsorship, Term } from './types';
+
+// Stated sponsorship, as a card says it. Only ever shown when a source said
+// it; no label means "not stated", never "no".
+export const SPONSORSHIP_LABEL: Record<Sponsorship, string> = {
+  offers: 'Sponsors visas',
+  none: 'No sponsorship',
+  citizens: 'US citizens only',
+};
 
 // §2.1 — five duplicate pairs. Long forms are un-migrated legacy rows.
 const CATEGORY_MAP: Record<string, Category> = {
@@ -23,6 +31,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   software: 'Software',
   ai_data: 'AI / ML / Data',
   hardware: 'Hardware',
+  engineering: 'Other engineering',
   product: 'Product',
   quant: 'Quant',
   other: 'Other',
@@ -32,10 +41,33 @@ export const CATEGORY_ORDER: Category[] = [
   'software',
   'ai_data',
   'hardware',
+  'engineering',
   'product',
   'quant',
   'other',
 ];
+
+// The category vocabularies of the secondary feeds, mapped the same way as
+// Simplify's (§2.1): explicitly, and loudly on anything unmapped.
+const SECONDARY_CATEGORY_MAP: Record<string, Category> = {
+  // zshah101
+  'data & ml/ai': 'ai_data',
+  security: 'software',
+  // WonOfAKind disciplines
+  'ai / machine learning': 'ai_data',
+  'data science & analytics': 'ai_data',
+  'hardware & electrical engineering': 'hardware',
+  'aerospace engineering': 'engineering',
+  'mechanical engineering': 'engineering',
+  'manufacturing & industrial engineering': 'engineering',
+  'other engineering': 'engineering',
+  'technical writing': 'other',
+};
+
+export function normalizeAnyCategory(raw: string | undefined): Category {
+  if (!raw) return 'other';
+  return SECONDARY_CATEGORY_MAP[raw.trim().toLowerCase()] ?? normalizeCategory(raw);
+}
 
 // Collects categories the map has never seen. Ingest logs these loudly
 // (§2.1) rather than silently defaulting to `other`.
@@ -113,6 +145,21 @@ export function isTermOpen(term: Term, now: Date): boolean {
   const p = split(term);
   if (!p) return false;
   return termSortKey(term) > now.getFullYear() * 12 + now.getMonth();
+}
+
+// A term stated in the title itself: "Software Engineer Intern - Summer 2027".
+// Used for feeds with no term field. It only reads what the title says outright
+// — "Spring & Summer 2027" yields Summer 2027 alone, since "Spring" has no year
+// of its own — and a title that names no term yields `unspecified`.
+export function termsFromTitle(title: string): Term[] {
+  const out = new Set<Term>();
+  for (const m of title.matchAll(/\b(spring|summer|fall|autumn|winter)\s+'?(20[0-9]{2}|[0-9]{2})\b/gi)) {
+    const season = m[1].toLowerCase() === 'autumn' ? 'fall' : m[1].toLowerCase();
+    const year = m[2].length === 2 ? `20${m[2]}` : m[2];
+    const t = parseTerm(`${season} ${year}`);
+    if (t && t !== 'unspecified') out.add(t);
+  }
+  return out.size > 0 ? [...out] : ['unspecified'];
 }
 
 export function normalizeTerms(raw: string[] | undefined): Term[] {

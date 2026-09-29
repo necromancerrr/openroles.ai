@@ -2,7 +2,7 @@
 // An <a> wrapping an <article>: one link, one tab stop. Never a <div onClick>.
 
 import type { Job } from '@/lib/types';
-import { CATEGORY_LABELS, primaryTerm, termLabel } from '@/lib/taxonomy';
+import { CATEGORY_LABELS, SPONSORSHIP_LABEL, primaryTerm, termLabel } from '@/lib/taxonomy';
 import { ageBucket, ageText, isNew, isoDate } from '@/lib/age';
 import { CompanyMark } from './CompanyMark';
 
@@ -34,13 +34,23 @@ export function JobCard({
     .filter(Boolean)
     .join(' ');
 
-  // §5.1 screen-reader announcement.
-  const srLabel = `${job.title}, ${job.company}, ${firstLoc}${
-    moreCount ? ` and ${moreCount} more` : ''
-  }, posted ${ageText(job.firstSeenAt, now)}, link.`;
+  // §5.1 screen-reader announcement, with pay and sponsorship when stated.
+  const srLabel = [
+    job.title,
+    job.company,
+    `${firstLoc}${moreCount ? ` and ${moreCount} more` : ''}`,
+    job.pay ? `pays ${job.pay.replace('/hr', ' an hour').replace('/yr', ' a year').replace('/mo', ' a month').replace('/wk', ' a week')}` : '',
+    job.sponsorship ? SPONSORSHIP_LABEL[job.sponsorship] : '',
+    `posted ${ageText(job.firstSeenAt, now)}`,
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   // The rail token comes off `data-age` in CSS rather than an inline custom
   // property: one stylesheet rule instead of a style attribute per card.
+  // `data-key` is how the reader's own "opened" memory finds this card
+  // (components/BoardMemory.tsx) — the canonical key is stable across feeds
+  // and refreshes, where a source's id isn't.
   return (
     <a
       className={cls}
@@ -48,7 +58,8 @@ export function JobCard({
       target="_blank"
       rel="noopener noreferrer"
       data-age={bucket}
-      aria-label={srLabel}
+      data-key={job.canonicalKey}
+      aria-label={`${srLabel}. Opens the application in a new tab.`}
     >
       <article>
         {density === 'comfortable' && (
@@ -74,6 +85,16 @@ export function JobCard({
             <h3 className="card__title" aria-hidden>
               {job.title}
             </h3>
+            {(job.pay || job.sponsorship) && (
+              <div className="card__facts" aria-hidden>
+                {job.pay && <span className="card__pay">{job.pay}</span>}
+                {job.sponsorship && (
+                  <span className={`card__tag card__tag--${job.sponsorship}`}>
+                    {SPONSORSHIP_LABEL[job.sponsorship]}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -83,6 +104,9 @@ export function JobCard({
             {moreCount > 0 && <span className="more"> +{moreCount}</span>}
           </span>
           <span className="card__age">
+            <span className="card__opened" aria-hidden>
+              Opened
+            </span>
             {job.isRemote && <span className="card__remote" aria-hidden>REMOTE</span>}
             {job.active && isNew(bucket) && (
               <span className="card__new" aria-hidden>NEW</span>
