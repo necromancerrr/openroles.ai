@@ -9,13 +9,14 @@
                         night in dark mode
      olive   #606C38    taxonomy and good news: category · term, "Sponsors
                         visas", a source that's ok
-     cream   #FEFAE0    paper, and the light behind the glass
+     cream   #FEFAE0    the page — one flat color, edge to edge
      tan     #DDA15E    money: pay is the one fact that gets its own warm color
      rust    #BC6C25    caution, only: "no sponsorship", a failed source,
                         stale data
 
-   Glass is for chrome — the nav, the filter panel, the sticky grid header, the
-   ⌘K palette. Cards are solid: they're what people read. Every text pairing in
+   The page is one color (cream by day, forest night after dark) — no washes,
+   no gradients behind it. Glass is for chrome — the nav, the filter panel, the
+   sticky grid header, the ⌘K palette. Cards are solid: they're what people read. Every text pairing in
    both themes clears WCAG AA (4.5:1); baby blue, tan and rust are never small
    text on a light surface — darker inks of each carry the words.
    =========================================================================== */
@@ -32,7 +33,7 @@
   --rust:   #BC6C25;
 
   /* Surfaces and ink. */
-  --bg:          #FFFDF5;
+  --bg:          #FEFAE0;   /* cream: the page is one color, nothing behind it */
   --surface:     #FFFFFF;
   --surface-2:   #FBF8EC;
   --surface-3:   #F2EEDA;
@@ -88,10 +89,6 @@
   --shadow-md: 0 2px 6px rgb(40 54 24 / 0.05), 0 12px 32px -8px rgb(40 54 24 / 0.14);
   --shadow-lg: 0 6px 16px -4px rgb(40 54 24 / 0.10), 0 24px 56px -16px rgb(40 54 24 / 0.22);
 
-  --aurora-a: rgb(254 250 224 / 1);
-  --aurora-b: rgb(142 205 240 / 0.42);
-  --aurora-c: rgb(96 108 56 / 0.18);
-  --grain-opacity: 0.035;
 
   /* Type. The self-hosted @fontsource-variable packages register their
      families with a "Variable" suffix; naming only the plain family matches
@@ -163,10 +160,6 @@
   --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-md: 0 2px 6px rgb(0 0 0 / 0.25), 0 12px 32px -8px rgb(0 0 0 / 0.5);
   --shadow-lg: 0 6px 16px -4px rgb(0 0 0 / 0.4), 0 24px 56px -16px rgb(0 0 0 / 0.65);
-  --aurora-a: rgb(96 108 56 / 0.40);
-  --aurora-b: rgb(124 203 250 / 0.15);
-  --aurora-c: rgb(188 108 37 / 0.16);
-  --grain-opacity: 0.06;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -207,10 +200,6 @@
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
     --shadow-md: 0 2px 6px rgb(0 0 0 / 0.25), 0 12px 32px -8px rgb(0 0 0 / 0.5);
     --shadow-lg: 0 6px 16px -4px rgb(0 0 0 / 0.4), 0 24px 56px -16px rgb(0 0 0 / 0.65);
-    --aurora-a: rgb(96 108 56 / 0.40);
-    --aurora-b: rgb(124 203 250 / 0.15);
-    --aurora-c: rgb(188 108 37 / 0.16);
-    --grain-opacity: 0.06;
   }
 }
 
@@ -281,34 +270,12 @@ kbd {
 [data-age="3"] { --rail-color: var(--age-3); }
 [data-age="4"] { --rail-color: var(--age-4); }
 
-/* --- Aurora --------------------------------------------------------------- */
-.aurora {
-  position: fixed; inset: 0; z-index: -1;
-  overflow: hidden; pointer-events: none;
-}
-.aurora__blob {
-  position: absolute;
-  width: 72vmax; height: 72vmax; border-radius: 50%;
-  background: radial-gradient(closest-side, var(--c), transparent);
-  will-change: transform;
-}
-.aurora__blob--a { --c: var(--aurora-a); top: -34vmax; left: -22vmax; animation: drift-a 26s var(--ease-in-out) infinite alternate; }
-.aurora__blob--b { --c: var(--aurora-b); top: -30vmax; right: -30vmax; animation: drift-b 32s var(--ease-in-out) infinite alternate; }
-.aurora__blob--c { --c: var(--aurora-c); bottom: -46vmax; left: 18vw; animation: drift-c 38s var(--ease-in-out) infinite alternate; }
-.aurora__grain {
-  position: absolute; inset: 0;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-}
-@keyframes drift-a { to { transform: translate3d(10vw, 8vh, 0) scale(1.1); } }
-@keyframes drift-b { to { transform: translate3d(-12vw, 10vh, 0) scale(0.92); } }
-@keyframes drift-c { to { transform: translate3d(-8vw, -12vh, 0) scale(1.12); } }
-
 /* --- Glass ---------------------------------------------------------------- */
 /* Solid by default, so anything without backdrop-filter — or a reader who
    asked for less transparency — gets a legible panel. The glass itself: tint,
-   blur, a saturation lift so the aurora glows through, a bright rim along the
-   top edge, and a faint diagonal sheen. The blur is never animated. */
+   blur, a saturation lift so the cards scrolling under it keep their color, a
+   bright rim along the top edge, and a faint diagonal sheen. The blur is never
+   animated. */
 .glass {
   position: relative;
   isolation: isolate;
@@ -1185,7 +1152,6 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
   margin-top: 72px;
   padding: 40px var(--gutter) 44px;
   border-top: 1px solid var(--rule);
-  background: color-mix(in oklab, var(--surface) 45%, transparent);
 }
 .footer__inner {
   max-width: 1180px; margin: 0 auto;
@@ -1318,7 +1284,6 @@ legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: re
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
   }
-  .aurora { opacity: 0.4; }
 }
 @media (prefers-contrast: more) {
   :root { --rule: rgb(40 54 24 / 0.35); --rule-strong: rgb(40 54 24 / 0.6); --ink-3: var(--ink-2); }

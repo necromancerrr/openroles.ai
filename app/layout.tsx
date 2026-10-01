@@ -6,7 +6,6 @@ import '@fontsource/instrument-serif/400-italic.css';
 import './globals.css';
 import { SITE_URL } from '@/lib/site';
 import { THEME_INIT } from '@/lib/theme';
-import { Aurora } from '@/components/Aurora';
 import { CommandPalette } from '@/components/CommandPalette';
 
 const description =
@@ -37,7 +36,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FFFDF5' },
+    { media: '(prefers-color-scheme: light)', color: '#FEFAE0' },
     { media: '(prefers-color-scheme: dark)', color: '#11160A' },
   ],
   colorScheme: 'light dark',
@@ -59,7 +58,6 @@ export default function RootLayout({
         <a className="skiplink" href="#main">
           Skip to the board
         </a>
-        <Aurora />
         {children}
         <CommandPalette />
         {/* Vercel Analytics. It's deferred and doesn't block the render, and it
