@@ -13,6 +13,11 @@
 // something on screen: first-timers get the introduction; returning readers
 // get what's new since they were last here, a line across the grid where
 // "new" ends, and a way to see only those.
+//
+// Motion: the grid is keyed by the filter state, so a filter change mounts a
+// fresh grid and its first rows deal in again (globals.css, "Cards"). Paging
+// and density keep the key — growing the list or tightening it in place
+// shouldn't replay anything.
 
 import { Suspense } from 'react';
 import { cookies } from 'next/headers';
@@ -20,7 +25,7 @@ import Link from 'next/link';
 import { getFeed, hasFeed, type Feed } from '@/lib/ingest';
 import { parseFilters, applyFilters, newSinceCount } from '@/lib/filter';
 import { parseVisit, sinceFor, VISIT_COOKIE, type Visit } from '@/lib/visit';
-import { ageText } from '@/lib/age';
+import { ageBucket, ageText } from '@/lib/age';
 import {
   moreHref,
   parseShown,
@@ -31,13 +36,17 @@ import {
   PAGE_SIZE,
   type SP,
 } from '@/lib/url';
-import { FilterBar } from '@/components/FilterBar';
+import { FilterBar, pillAt } from '@/components/FilterBar';
 import { JobCard } from '@/components/JobCard';
 import { SystemBanner } from '@/components/SystemBanner';
 import { EmptyState } from '@/components/EmptyState';
 import { ActiveFilterSummary } from '@/components/ActiveFilters';
 import { BoardSkeleton } from '@/components/BoardSkeleton';
 import { BoardMemory } from '@/components/BoardMemory';
+import { CompanyMark } from '@/components/CompanyMark';
+import { CountUp } from '@/components/CountUp';
+import { SiteNav, LivePill } from '@/components/SiteNav';
+import { SiteFooter } from '@/components/SiteFooter';
 
 export const dynamic = 'force-dynamic';
 // Room for the background refresh that `after()` runs once the response is
@@ -50,10 +59,19 @@ const TYPE_LABEL: Record<string, string> = {
   unknown: 'unclassified',
 };
 
+const TYPE_TITLE: Record<string, string> = {
+  internship: 'Internships',
+  new_grad: 'New grad roles',
+  unknown: 'Unclassified',
+};
+
 const DENSITIES: { value: 'comfortable' | 'compact'; label: string }[] = [
   { value: 'comfortable', label: 'Comfortable' },
   { value: 'compact', label: 'Compact' },
 ];
+
+// Stagger index for the entrance animation (globals.css `.rise`).
+const at = (i: number) => ({ '--i': i }) as React.CSSProperties;
 
 export default async function BoardPage({
   searchParams,
@@ -64,51 +82,41 @@ export default async function BoardPage({
   const visit = parseVisit((await cookies()).get(VISIT_COOKIE)?.value);
   const cold = !hasFeed();
 
-  const meta = <MastheadMeta />;
+  const meta = <NavMeta />;
   const board = <Board sp={sp} visit={visit} />;
 
   return (
-    <main className="shell">
-      <header className="masthead">
-        <div>
-          <div className="wordmark">
-            open<span>roles</span>
-          </div>
-          <div className="eyebrow" style={{ marginTop: 4 }}>
-            what&apos;s open, and what&apos;s about to close
-          </div>
-        </div>
-        {cold ? (
-          <Suspense
-            fallback={
-              <div className="masthead__meta">
-                <Link href="/status">status</Link>
-              </div>
-            }
-          >
-            {meta}
-          </Suspense>
-        ) : (
-          meta
-        )}
-      </header>
-
-      {cold ? <Suspense fallback={<BoardSkeleton />}>{board}</Suspense> : board}
-    </main>
+    <>
+      <SiteNav
+        current="board"
+        meta={
+          cold ? (
+            <Suspense fallback={<LivePill>Connecting…</LivePill>}>{meta}</Suspense>
+          ) : (
+            meta
+          )
+        }
+      />
+      <main className="shell" id="main">
+        {cold ? <Suspense fallback={<BoardSkeleton />}>{board}</Suspense> : board}
+      </main>
+      <SiteFooter />
+    </>
   );
 }
 
-async function MastheadMeta() {
+async function NavMeta() {
   const { jobs, lastRunAt, origin } = await getFeed();
   // eslint-disable-next-line react-hooks/purity
   const now = Math.floor(Date.now() / 1000);
   return (
-    <div className="masthead__meta">
-      {jobs.length.toLocaleString()} live · checked {ageText(lastRunAt, now)}
-      {' · '}
-      <Link href="/status">status</Link>
-      {origin === 'sample' && ' · sample data'}
-    </div>
+    <LivePill>
+      <strong>{jobs.length.toLocaleString('en-US')}</strong> live
+      <span className="livepill__when">
+        {' · '}checked {ageText(lastRunAt, now)}
+        {origin === 'sample' && ' · sample data'}
+      </span>
+    </LivePill>
   );
 }
 
@@ -118,37 +126,104 @@ function lastVisitPhrase(since: number, now: number): string {
   return /ago$/.test(t) ? t : `on ${t}`;
 }
 
-// First visit: what this is and how to read it, with the live numbers.
-function Intro({ feed, now }: { feed: Feed; now: number }) {
+// First visit: what this is and how to read it, with the live numbers and the
+// newest postings themselves.
+function Intro({ feed, now, sp }: { feed: Feed; now: number; sp: SP }) {
   const today = feed.jobs.filter((j) => now - j.firstSeenAt < 86400).length;
+  const week = feed.jobs.filter((j) => now - j.firstSeenAt < 7 * 86400).length;
   const sources = feed.runs.filter((r) => r.status === 'ok' || r.carried).length;
+  const newest = feed.jobs.filter((j) => j.active).slice(0, 4);
+
   return (
-    <section className="intro" aria-labelledby="intro-title">
-      <div className="intro__copy">
-        <span className="eyebrow">Internships · new grad · refreshed hourly</span>
-        <h1 id="intro-title">Catch the opening, not the recap.</h1>
-        <p>
-          {feed.jobs.length.toLocaleString()} open early-career roles from {sources} live
-          sources, newest first — {today.toLocaleString()} of them posted in the last 24
-          hours. Every filter is a link you can share, and the application is one click
-          away.
+    <section className="hero" aria-labelledby="hero-title">
+      <div className="hero__copy">
+        <p className="hero__eyebrow rise" style={at(0)}>
+          <span className="livedot" aria-hidden /> Internships · New grad
+          <span className="hide-sm"> · Refreshed hourly</span>
         </p>
+        <h1 id="hero-title" className="rise" style={at(1)}>
+          Catch the opening, <em>not the recap.</em>
+        </h1>
+        <p className="hero__lead rise" style={at(2)}>
+          {feed.jobs.length.toLocaleString('en-US')} open early-career roles from {sources}{' '}
+          live sources, newest first. Every filter is a link you can share, and the
+          application is one click away.
+        </p>
+        <div className="hero__ctas rise" style={at(3)}>
+          <a className="btn btn--primary btn--lg" href="#filters">
+            Browse the board
+            <svg viewBox="0 0 24 24" aria-hidden>
+              <path d="M12 5v14M6 13l6 6 6-6" />
+            </svg>
+          </a>
+          <Link
+            className="btn btn--glass btn--lg"
+            href={`${toggleFlagHref(sp, 'campus')}#filters`}
+          >
+            Seattle + remote
+          </Link>
+        </div>
       </div>
-      <div className="intro__notes">
-        <div className="intro__note">
-          <span className="intro__note-index">01</span>
-          <p>
-            The green rail is time. Brighter means newer; a quiet rail means the window
-            has been open a while.
-          </p>
+
+      {newest.length > 0 && (
+        <aside className="justposted glass rise" style={at(2)} aria-labelledby="justposted-title">
+          <div className="justposted__head">
+            <span className="livedot" aria-hidden />
+            <span id="justposted-title">Just posted</span>
+            <span className="justposted__hint">opens the application</span>
+          </div>
+          <ul>
+            {newest.map((j, i) => (
+              <li key={j.canonicalKey} style={at(i)}>
+                <a
+                  href={j.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  data-age={ageBucket(j.firstSeenAt, now)}
+                >
+                  <CompanyMark initials={j.initials} logoUrl={j.logoUrl} />
+                  <span className="justposted__text">
+                    <span className="justposted__company">{j.company}</span>
+                    <span className="justposted__title">{j.title}</span>
+                  </span>
+                  <span className="justposted__age">{ageText(j.firstSeenAt, now)}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      )}
+
+      <dl className="stats">
+        <div className="stat rise" style={at(4)}>
+          <dt>Live roles</dt>
+          <dd><CountUp value={feed.jobs.length} /></dd>
         </div>
-        <div className="intro__note">
-          <span className="intro__note-index">02</span>
-          <p>
-            Come back tomorrow: the board marks what&apos;s new since your last visit,
-            and remembers which roles you&apos;ve opened.
-          </p>
+        <div className="stat rise" style={at(5)}>
+          <dt>Posted in the last 24h</dt>
+          <dd><CountUp value={today} /></dd>
         </div>
+        <div className="stat rise" style={at(6)}>
+          <dt>Posted this week</dt>
+          <dd><CountUp value={week} /></dd>
+        </div>
+        <div className="stat rise" style={at(7)}>
+          <dt>Live sources, merged</dt>
+          <dd><CountUp value={sources} /></dd>
+        </div>
+      </dl>
+
+      <div className="hero__notes rise" style={at(8)}>
+        <p>
+          <span className="hero__note-index">01</span>
+          The blue rail is time. Bright sky means just posted; it settles into earth
+          as the window stays open.
+        </p>
+        <p>
+          <span className="hero__note-index">02</span>
+          Come back tomorrow: the board marks what&apos;s new since your last visit, and
+          remembers which roles you&apos;ve opened.
+        </p>
       </div>
     </section>
   );
@@ -171,24 +246,33 @@ function WelcomeBack({
   sp: SP;
 }) {
   return (
-    <section className="welcome" aria-label="Since your last visit">
-      <p className="welcome__line">
-        {count > 0 ? (
-          <>
-            <span className="welcome__count">{count.toLocaleString()}</span> new {typeLabel}{' '}
-            {count === 1 ? 'posting' : 'postings'} since your last visit,{' '}
-            {lastVisitPhrase(since, now)}.
-          </>
-        ) : (
-          <>
-            Nothing new in {typeLabel} postings since your last visit,{' '}
-            {lastVisitPhrase(since, now)}. The board is checked hourly.
-          </>
-        )}
-      </p>
+    <section className="welcome glass rise" style={at(0)} aria-label="Since your last visit">
+      <div className="welcome__main">
+        {count > 0 && <CountUp className="welcome__count" value={count} />}
+        <p className="welcome__line">
+          {count > 0 ? (
+            <>
+              new {typeLabel} {count === 1 ? 'posting' : 'postings'} since your last
+              visit, {lastVisitPhrase(since, now)}.
+            </>
+          ) : (
+            <>
+              Nothing new in {typeLabel} postings since your last visit,{' '}
+              {lastVisitPhrase(since, now)}. The board is checked hourly.
+            </>
+          )}
+        </p>
+      </div>
       {(count > 0 || showingOnlyNew) && (
-        <Link className="welcome__cta" href={toggleFlagHref(sp, 'new')} scroll={false}>
-          {showingOnlyNew ? 'Show everything' : 'Show only these →'}
+        <Link
+          className="btn btn--primary btn--next"
+          href={toggleFlagHref(sp, 'new')}
+          scroll={false}
+        >
+          {showingOnlyNew ? 'Show everything' : 'Show only these'}
+          <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
         </Link>
       )}
     </section>
@@ -227,7 +311,7 @@ async function Board({ sp, visit }: { sp: SP; visit: Visit }) {
   return (
     <>
       {since === undefined ? (
-        <Intro feed={feed} now={now} />
+        <Intro feed={feed} now={now} sp={sp} />
       ) : (
         <WelcomeBack
           count={newCount}
@@ -244,68 +328,93 @@ async function Board({ sp, visit }: { sp: SP; visit: Visit }) {
       <FilterBar jobs={jobs} filters={filters} sp={sp} />
       <ActiveFilterSummary filters={filters} sp={sp} />
 
-      <div className="gridhead" id="roles">
-        <span className="eyebrow">{typeLabel} · newest first</span>
-        <div className="gridhead__right">
-          <BoardMemory renderedAt={now} />
-          {/* Density is documented on JobCard (§5.1); this is its control. */}
-          <div className="segmented segmented--sm" aria-label="Card density">
-            {DENSITIES.map((d) => (
-              <Link
-                key={d.value}
-                href={setDensityHref(sp, d.value)}
-                aria-current={density === d.value}
-                scroll={false}
-                prefetch={false}
-              >
-                {d.label}
-              </Link>
-            ))}
-          </div>
-          <span className="gridhead__count">
-            {visible.length.toLocaleString()} {visible.length === 1 ? 'posting' : 'postings'}
-          </span>
-        </div>
-      </div>
-
-      {visible.length === 0 ? (
-        <EmptyState filters={filters} sp={sp} typeLabel={typeLabel} />
-      ) : (
-        <>
-          <div className={density === 'compact' ? 'grid grid--compact' : 'grid'}>
-            {page.map((job, i) => (
-              <FragmentWithEdge key={job.canonicalKey} edge={i === edge && i > 0} since={since} now={now}>
-                <JobCard job={job} now={now} density={density} showType={showType} />
-              </FragmentWithEdge>
-            ))}
-          </div>
-          <div className="gridfoot">
-            {remaining > 0 && (
-              <Link
-                className="showmore"
-                href={moreHref(sp, page.length)}
-                scroll={false}
-                prefetch={false}
-              >
-                Show {Math.min(PAGE_SIZE, remaining)} more
-              </Link>
-            )}
-            <span className="eyebrow">
-              {page.length.toLocaleString()} of {visible.length.toLocaleString()} shown
+      <div className="results" id="roles">
+        <div className="gridhead glass">
+          <div className="gridhead__left">
+            <h2 className="gridhead__title">{TYPE_TITLE[filters.type]}</h2>
+            <span className="gridhead__count">
+              {visible.length.toLocaleString('en-US')}{' '}
+              {visible.length === 1 ? 'posting' : 'postings'} · newest first
             </span>
-            <span className="gridfoot__aside">
-              <span className="kbdhint">
-                <kbd>/</kbd> search · <kbd>j</kbd> <kbd>k</kbd> move · <kbd>↵</kbd> open
+          </div>
+          <div className="gridhead__right">
+            <BoardMemory renderedAt={now} />
+            {/* Density is documented on JobCard (§5.1); this is its control. */}
+            <div className="segmented segmented--sm" aria-label="Card density">
+              <span
+                className="segmented__pill"
+                aria-hidden
+                style={pillAt(DENSITIES.findIndex((d) => d.value === density), DENSITIES.length)}
+              />
+              {DENSITIES.map((d) => (
+                <Link
+                  key={d.value}
+                  href={setDensityHref(sp, d.value)}
+                  aria-current={density === d.value}
+                  scroll={false}
+                  prefetch={false}
+                >
+                  <span className="segmented__label">{d.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {visible.length === 0 ? (
+          <EmptyState filters={filters} sp={sp} typeLabel={typeLabel} />
+        ) : (
+          <>
+            <div
+              key={gridKey(sp)}
+              className={density === 'compact' ? 'grid grid--compact' : 'grid'}
+            >
+              {page.map((job, i) => (
+                <FragmentWithEdge key={job.canonicalKey} edge={i === edge && i > 0} since={since} now={now}>
+                  <JobCard job={job} now={now} density={density} showType={showType} />
+                </FragmentWithEdge>
+              ))}
+            </div>
+            <div className="gridfoot">
+              {remaining > 0 && (
+                <Link
+                  className="btn btn--primary showmore"
+                  href={moreHref(sp, page.length)}
+                  scroll={false}
+                  prefetch={false}
+                >
+                  Show {Math.min(PAGE_SIZE, remaining).toLocaleString('en-US')} more
+                  <svg viewBox="0 0 24 24" aria-hidden>
+                    <path d="M12 5v14M6 13l6 6 6-6" />
+                  </svg>
+                </Link>
+              )}
+              <span className="gridfoot__count">
+                {page.length.toLocaleString('en-US')} of {visible.length.toLocaleString('en-US')} shown
               </span>
               <a className="feedlink" href={feedHref(sp)}>
+                <svg viewBox="0 0 24 24" aria-hidden>
+                  <path d="M5 5a14 14 0 0 1 14 14M5 11a8 8 0 0 1 8 8" />
+                  <circle cx="6" cy="18" r="1.4" />
+                </svg>
                 RSS for this view
               </a>
-            </span>
-          </div>
-        </>
-      )}
+            </div>
+          </>
+        )}
+      </div>
     </>
   );
+}
+
+// Identity of a result set: every param except the paging window and the
+// density, which change how much of the same set is shown, not which set.
+function gridKey(sp: SP): string {
+  return Object.entries(sp)
+    .filter(([k, v]) => k !== 'n' && k !== 'd' && v != null)
+    .map(([k, v]) => `${k}=${Array.isArray(v) ? v.join(',') : v}`)
+    .sort()
+    .join('&');
 }
 
 // A card, preceded — for exactly one card per render — by the line where the

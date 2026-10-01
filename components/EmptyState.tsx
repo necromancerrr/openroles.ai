@@ -20,6 +20,13 @@ export function EmptyState({
 
   return (
     <div className="empty">
+      <div className="empty__icon" aria-hidden>
+        <svg viewBox="0 0 48 48">
+          <circle cx="21" cy="21" r="12" />
+          <path d="m30 30 9 9" />
+          <path d="M16 21h10" />
+        </svg>
+      </div>
       <div className="empty__title">
         {filters.query
           ? `No ${typeLabel} postings match “${filters.query}”.`

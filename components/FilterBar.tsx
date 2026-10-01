@@ -10,6 +10,11 @@
 // two screens of chips before the first job. The toggle is a checkbox and a
 // sibling selector — no client JS, no layout shift, and the desktop layout
 // never sees it.
+//
+// The whole thing is one glass panel — the board's control center. The Type
+// tabs are equal-width cells over one sliding pill: the server tells the pill
+// which cell it sits under (`--at`), and when a navigation changes that, CSS
+// springs it across (globals.css, "Segmented").
 
 import Link from 'next/link';
 import type { Job, Category, Term, JobType } from '@/lib/types';
@@ -43,6 +48,11 @@ const TYPE_TABS: { value: JobType; label: string }[] = [
   { value: 'new_grad', label: 'New grad' },
   { value: 'unknown', label: 'Unclassified' },
 ];
+
+// Where a segmented control's sliding pill sits: cell `at` of `n`.
+export function pillAt(at: number, n: number): React.CSSProperties {
+  return { '--at': Math.max(at, 0), '--n': n } as React.CSSProperties;
+}
 
 export function FilterBar({
   jobs,
@@ -107,10 +117,10 @@ export function FilterBar({
     (filters.visa ? 1 : 0);
 
   return (
-    <div className="filterbar">
-      <div className="campusbar">
-        <div className="campusbar__copy">
-          <span className="campusbar__badge">UW launchpad</span>
+    <section className="control glass" id="filters" aria-label="Filters">
+      <div className="campus">
+        <div className="campus__copy">
+          <span className="campus__badge">UW launchpad</span>
           <div>
             <strong>Seattle + remote, in one tap.</strong>
             <p>Built for Huskies searching around class, commute, and graduation.</p>
@@ -124,29 +134,33 @@ export function FilterBar({
         />
       </div>
 
-      {/* 0. Search — widest possible net, so it sits above the facets. */}
-      <div className="filterrow">
-        <span className="filterrow__label">Search</span>
+      <div className="control__top">
+        {/* 0. Search — widest possible net, so it sits above the facets. */}
         <SearchBox sp={sp} query={filters.query} />
-      </div>
 
-      {/* 1. Type */}
-      <div className="filterrow">
-        <span className="filterrow__label">Type</span>
+        {/* 1. Type */}
         <div className="segmented" role="tablist" aria-label="Job type">
-          {TYPE_TABS.map((tab) => (
-            <Link
-              key={tab.value}
-              href={setTypeHref(sp, tab.value)}
-              role="tab"
-              aria-selected={filters.type === tab.value}
-              aria-current={filters.type === tab.value}
-              scroll={false}
-            >
-              {tab.label}
-              <span className="count">{tCounts[tab.value]}</span>
-            </Link>
-          ))}
+          <span
+            className="segmented__pill"
+            aria-hidden
+            style={pillAt(TYPE_TABS.findIndex((t) => t.value === filters.type), TYPE_TABS.length)}
+          />
+          {TYPE_TABS.map((tab) => {
+            const on = filters.type === tab.value;
+            return (
+              <Link
+                key={tab.value}
+                href={setTypeHref(sp, tab.value)}
+                role="tab"
+                aria-selected={on}
+                aria-current={on}
+                scroll={false}
+              >
+                <span className="segmented__label">{tab.label}</span>
+                <span className="count">{tCounts[tab.value].toLocaleString('en-US')}</span>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -246,6 +260,6 @@ export function FilterBar({
         </span>
       </fieldset>
       </div>
-    </div>
+    </section>
   );
 }

@@ -5,7 +5,8 @@
 // The spec's ideal is <input type=checkbox> + <label>; here filters are driven
 // by URL navigation to keep the page a Server Component, so each chip is a link
 // (a navigation, natively keyboard-accessible). Selected/disabled state is
-// carried in data-* attributes and announced via aria-*.
+// carried in data-* attributes and announced via aria-*. A selected chip fills
+// with forest and grows a check (globals.css animates it in).
 
 import Link from 'next/link';
 
@@ -24,8 +25,13 @@ export function Chip({
 
   const inner = (
     <>
+      {selected && (
+        <svg className="chip__check" viewBox="0 0 24 24" aria-hidden>
+          <path d="m5 12.5 4.5 4.5L19 7.5" />
+        </svg>
+      )}
       <span>{label}</span>
-      {count !== undefined && <span className="count">{count}</span>}
+      {count !== undefined && <span className="count">{count.toLocaleString('en-US')}</span>}
     </>
   );
 

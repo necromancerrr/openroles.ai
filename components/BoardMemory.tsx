@@ -10,10 +10,13 @@
 //      question, after "what's new", is "which of these did I already look at".
 //   3. Keys. `/` focuses search; `j` / `k` step through the cards; Enter opens
 //      one (it's a link — that part needed no code).
+//   4. Light. The card under a mouse pointer gets a soft spotlight that follows
+//      it: one delegated pointermove, at most one style write per frame, and
+//      only for fine pointers.
 //
-// It only ever sets data-* attributes on server-rendered cards. It never adds
-// or removes nodes React owns, which is what keeps it safe across RSC
-// navigations. Everything is wrapped for storage that throws (private mode,
+// It only ever sets data-* attributes and CSS custom properties on
+// server-rendered cards. It never adds or removes nodes React owns, which is
+// what keeps it safe across RSC navigations. Everything is wrapped for storage that throws (private mode,
 // blocked site data): the board must work exactly the same without it.
 
 import { useCallback, useEffect, useState } from 'react';
@@ -169,6 +172,35 @@ export function BoardMemory({ renderedAt }: { renderedAt: number }) {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // 4. Light.
+  useEffect(() => {
+    if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    let frame = 0;
+    let card: HTMLElement | null = null;
+    let x = 0;
+    let y = 0;
+    const onMove = (e: PointerEvent) => {
+      const el = (e.target as Element | null)?.closest?.('a.card');
+      card = el instanceof HTMLElement ? el : null;
+      if (!card) return;
+      x = e.clientX;
+      y = e.clientY;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        if (!card) return;
+        const r = card.getBoundingClientRect();
+        card.style.setProperty('--mx', `${Math.round(x - r.left)}px`);
+        card.style.setProperty('--my', `${Math.round(y - r.top)}px`);
+      });
+    };
+    document.addEventListener('pointermove', onMove, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('pointermove', onMove);
+    };
   }, []);
 
   if (openedHere === 0 && !hide) return null;

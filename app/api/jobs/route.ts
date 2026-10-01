@@ -30,6 +30,8 @@ export async function GET(req: Request) {
       limit,
       jobs: matched.slice(offset, offset + limit).map((j) => ({
         company: j.company,
+        initials: j.initials,
+        logo: j.logoUrl ?? null,
         title: j.title,
         url: j.url,
         type: j.type,

@@ -5,7 +5,7 @@
   "engines": {
     "node": ">=22.6.0"
   },
-  "description": "Internship & new-grad tracker — the Ledger design system. A scanning surface where age is the only thing that gets color.",
+  "description": "Internship & new-grad tracker — the Grove & Sky design system. A scanning surface where age is the signal: a baby-blue freshness rail, liquid-glass chrome, light and dark.",
   "scripts": {
     "dev": "next dev",
     "prebuild": "npm run snapshot; node --experimental-strip-types scripts/fetch-logos.ts --budget=300 || echo '[prebuild] logo fetch skipped — building without it'",
@@ -21,9 +21,9 @@
     "fetch:logos": "node --experimental-strip-types scripts/fetch-logos.ts"
   },
   "dependencies": {
-    "@fontsource-variable/bricolage-grotesque": "5.3.0",
-    "@fontsource-variable/instrument-sans": "5.3.0",
-    "@fontsource-variable/jetbrains-mono": "5.3.0",
+    "@fontsource-variable/geist": "5.3.0",
+    "@fontsource-variable/geist-mono": "5.3.0",
+    "@fontsource/instrument-serif": "5.3.0",
     "@vercel/analytics": "^2.0.1",
     "next": "^16.3.0",
     "react": "19.0.0",
@@ -31,8 +31,8 @@
   },
   "devDependencies": {
     "@types/node": "22.10.7",
-    "@types/react": "19.0.7",
-    "@types/react-dom": "19.0.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "eslint": "^9.39.1",
     "eslint-config-next": "16.3.0",
     "tsx": "^4.20.6",

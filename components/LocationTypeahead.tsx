@@ -39,9 +39,8 @@ export function LocationTypeahead({
     <>
       <input
         list="loc-tail"
-        className="chip"
-        style={{ minWidth: 160 }}
-        placeholder="Search locations…"
+        className="chip chip--input"
+        placeholder="More locations…"
         aria-label="Search all locations"
         value={value}
         onChange={(e) => setValue(e.target.value)}

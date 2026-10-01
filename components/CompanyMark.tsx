@@ -7,7 +7,7 @@
 // fallback work without any client JS: a background image that fails to load
 // paints nothing, leaving the monogram visible, whereas a broken <img> draws
 // Chrome's broken-image icon (verified — <object> fallback content is no more
-// reliable). The box is a fixed 28px either way, so nothing reflows when a logo
+// reliable). The box is a fixed 40px squircle either way, so nothing reflows when a logo
 // resolves late, and because off-screen cards are content-visibility: auto, the
 // browser doesn't fetch their logos until they scroll in.
 
