@@ -1,10 +1,14 @@
 # openroles
 
-An internship & new-grad job board built to the **Ledger** design system
-(`internship-tracker-design-system.md`, v1). A scanning surface used daily under
-time pressure: the subject isn't "jobs," it's *windows closing*. So **age is the
-primary visual variable, and it's the only thing in the interface that gets
-color** — the decay rail on each card's leading edge.
+An internship & new-grad job board built to the **Grove & Sky** design system
+(`internship-tracker-design-system.md` §4, v2 — the data design in §1–3 is
+unchanged from v1 "Ledger"). A scanning surface used daily under time pressure:
+the subject isn't "jobs," it's *windows closing*. So **age is the primary visual
+variable** — a baby-blue freshness rail on each card's leading edge that settles
+into earth tones as a posting ages — and **every color has exactly one job**:
+baby blue is *new*, tan is *pay*, rust is *caution*, olive is *taxonomy and good
+news*, forest is ink, cream is paper. Liquid-glass chrome, solid cards, light
+and dark themes, and motion that's all CSS but one small client island.
 
 Live at **https://openroles-ai.vercel.app**. It merges five public job feeds
 into one board, normalizes them into one taxonomy, dedups across them, and
@@ -12,8 +16,15 @@ renders the board as a Server Component with every filter in the URL.
 
 ## What a reader gets
 
-- **Newest first, age as color.** The rail drains from green to a hairline as a
-  posting ages; `NEW` marks the last 24 hours (§4.1, §5.1).
+- **Newest first, age as color.** The rail runs vivid sky → baby blue → pale
+  sky → olive mist → hairline as a posting ages; `NEW` marks the last 24 hours
+  (§4.1, §5.1).
+- **⌘K / Ctrl+K palette.** Search every role as you type (it reads
+  `/api/jobs`), or jump to any view — a tab, the campus view, remote, visa,
+  new since your last visit, density, theme, status, RSS for this view.
+- **Light and dark.** Follows the system until you choose; the choice is stored
+  in the browser and applied by a blocking inline script, so there's no flash
+  (`lib/theme.ts`).
 - **What's new since your last visit.** A returning reader sees one line — *"51
   new internship postings since your last visit, 20h ago"* — instead of the
   introduction, a rule across the grid where "new" ends, and a *Show only these*

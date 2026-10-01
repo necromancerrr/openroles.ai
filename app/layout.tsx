@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import { Analytics } from '@vercel/analytics/next';
-import '@fontsource-variable/bricolage-grotesque';
-import '@fontsource-variable/instrument-sans';
-import '@fontsource-variable/jetbrains-mono';
+import '@fontsource-variable/geist';
+import '@fontsource-variable/geist-mono';
+import '@fontsource/instrument-serif/400-italic.css';
 import './globals.css';
 import { SITE_URL } from '@/lib/site';
+import { THEME_INIT } from '@/lib/theme';
+import { Aurora } from '@/components/Aurora';
+import { CommandPalette } from '@/components/CommandPalette';
 
 const description =
   'Fresh internship and new-grad roles merged from live job lists, newest first — with pay, visa sponsorship, a Seattle + remote view for UW students, and what’s new since your last visit.';
@@ -33,7 +36,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#F4F5F3',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FFFDF5' },
+    { media: '(prefers-color-scheme: dark)', color: '#11160A' },
+  ],
+  colorScheme: 'light dark',
 };
 
 export default function RootLayout({
@@ -42,9 +49,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    // The theme script below sets data-theme on <html> before the first paint,
+    // so React has to accept the attribute it finds there (lib/theme.ts).
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body>
+        <a className="skiplink" href="#main">
+          Skip to the board
+        </a>
+        <Aurora />
         {children}
+        <CommandPalette />
         {/* Vercel Analytics. It's deferred and doesn't block the render, and it
             no-ops outside a Vercel deployment. */}
         <Analytics />

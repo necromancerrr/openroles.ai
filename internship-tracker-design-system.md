@@ -1,4 +1,10 @@
-# Internship Tracker — Design System v1 ("Ledger")
+# Internship Tracker — Design System v2 ("Grove & Sky")
+
+> **v2 (Oct 2026):** §4 and the visual details in §5 were redesigned — liquid-glass
+> chrome, a six-color palette with one job per color, light and dark themes, and motion.
+> §1–3 (the data design) and every behavioral rule in §5 carry over from v1 "Ledger".
+> The tokens live in `app/globals.css`; it is the source of truth when this file and
+> it disagree.
 
 Companion to `internship-tracker-design.md` (v2). That doc reasoned about the data from
 documentation. This one is built on **the actual data, downloaded and profiled**. Several
@@ -255,80 +261,91 @@ Slug extraction has its own traps found in the data:
 The product is a **scanning surface used daily under time pressure**. Its subject matter
 is not "jobs," it's *windows closing* — every row is a thing that was open and will stop
 being open, and the only question the user asks in the first two seconds is "what's new
-since yesterday." So: **age is the primary visual variable, and it is the only thing in
-the interface that gets color.**
+since yesterday." So: **age is the primary visual variable.**
 
-**Signature: the decay rail.** Every card carries a 3px vertical bar on its leading edge
-whose chroma is a function of `first_seen_at`. Fresh postings are saturated; the color
-drains as the posting ages until the rail is a hairline neutral. The grid then reads as a
-column of signal without a single badge being parsed. Everything else in the UI —
-type, chrome, chips, buttons — is neutral. One accessory, worn deliberately.
+**Signature: the freshness rail.** Every card carries a 3px rounded bar on its leading
+edge whose color is a function of `first_seen_at`: vivid sky when just posted, then baby
+blue, a pale sky, an olive mist, and finally a hairline — *sky settles into earth*. The
+grid reads as a column of signal without a single badge being parsed.
 
-Green rather than an alert color, because a live posting is an *open* thing, not an urgent
-one; the semantics of the decay run open → closing → gone. Amber appears in exactly one
-place (the stale-data banner) and nowhere else, so it always means "the system is unwell,"
-never "this job is old."
+**One job per color.** Color is a vocabulary, not decoration, so each hue means exactly
+one thing everywhere it appears:
+
+| Color | Hex | Means | Where |
+|---|---|---|---|
+| Baby blue | `#8ECDF0` | **new / live / now** | freshness rail, `NEW`, the live dot, "new since your last visit", focus rings, hover glow |
+| Forest | `#283618` | ink, choice | text, selected chips, primary buttons; the night in dark mode |
+| Olive | `#606C38` | taxonomy, good news | category · term, "Sponsors visas", a source that's ok |
+| Cream | `#FEFAE0` | paper, light | the page, and the light behind the glass |
+| Tan | `#DDA15E` | **money** | the pay tag |
+| Rust | `#BC6C25` | **caution** | "No sponsorship", "US citizens only", a failed source, the stale-data banner |
+
+Rust appears nowhere decorative, so it always means "watch out." Blue never decorates a
+thing that isn't new or live.
+
+**Glass is for chrome; cards are solid.** The floating nav, the filter panel, the sticky
+grid header and the ⌘K palette are liquid glass — tint, `blur(22px) saturate(170%)`, a
+bright top rim and a faint diagonal sheen — over a slow aurora of the palette. Glass is a
+progressive enhancement: the default is a near-opaque panel, used whenever
+`backdrop-filter` is missing or the reader prefers reduced transparency or more contrast.
+Cards, the surface people actually read, are solid white (forest-night in dark mode) with
+real gaps and soft shadows. Never animate the blur; keep about four glass layers in view.
+
+**Themes.** Light (warm white, cream aurora) and dark (forest night `#11160A`, cream ink,
+brighter sky). The reader's choice is stored in `localStorage` (`or:theme`); with none, the
+system preference decides through CSS alone.
 
 ### 4.2 Tokens
 
+The full set is in `app/globals.css`; the load-bearing ones:
+
 ```css
 :root {
-  /* Neutrals — cool paper, ink with a green undertone so it sits with the signal hue */
-  --paper:        #F4F5F3;
-  --surface:      #FFFFFF;
-  --ink:          #101413;
-  --ink-2:        #46504C;   /* secondary text */
-  --ink-3:        #79837E;   /* tertiary / metadata */
-  --rule:         #DDE1DE;
-  --rule-strong:  #C3C9C5;
+  --bg: #FFFDF5;  --surface: #FFFFFF;  --surface-2: #FBF8EC;
+  --ink: #283618; --ink-2: #4A5530;    --ink-3: #6B7150;
 
-  /* Decay ramp — the only chromatic scale in the system */
-  --age-0:        #0E6B57;   /* < 6h   */
-  --age-1:        #2E7D6B;   /* 6–24h  */
-  --age-2:        #5A8A80;   /* 1–3d   */
-  --age-3:        #8A9994;   /* 3–7d   */
-  --age-4:        #C3C9C5;   /* > 7d — indistinguishable from a rule */
+  --accent: #2F8FCF;       /* strokes, large type (focus, wordmark) */
+  --accent-ink: #1E5F86;   /* text-safe blue */
+  --age-0: #3FA9E5; --age-1: #8ECDF0; --age-2: #C4E3F4; --age-3: #D5D6B8;
+  --age-4: rgb(40 54 24 / 0.12);
 
-  /* System state — used only by SystemBanner */
-  --warn:         #8A5A12;
-  --warn-bg:      #FBF3E2;
+  --pay-ink: #7A4D14;     --pay-bg: rgb(221 161 94 / 0.22);
+  --good-ink: #3E4A1C;    --good-bg: rgb(96 108 56 / 0.14);
+  --caution-ink: #8E4614; --caution-bg: rgb(188 108 37 / 0.14);
 
-  /* Type */
-  --font-display: 'Bricolage Grotesque', system-ui, sans-serif;
-  --font-ui:      'Instrument Sans', system-ui, sans-serif;
-  --font-data:    'JetBrains Mono', ui-monospace, monospace;
+  --font-display / --font-ui: 'Geist Variable';
+  --font-data:  'Geist Mono Variable';
+  --font-serif: 'Instrument Serif';  /* one italic accent phrase per headline */
 
-  --t-display:    clamp(1.75rem, 1.2rem + 2vw, 2.5rem);  /* wordmark, page title */
-  --t-title:      1.0625rem;   /* job title — the only 17px in the system */
-  --t-body:       0.9375rem;
-  --t-meta:       0.8125rem;   /* always --font-data */
-  --t-micro:      0.6875rem;   /* eyebrow, uppercase, 0.08em tracking */
-
-  /* Space — 4px base, only these steps */
-  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
-  --s-5: 24px; --s-6: 32px; --s-7: 48px;
-
-  /* Border + elevation */
-  --r-sm: 3px; --r-md: 6px;
-  --rail-w: 3px;
-  --shadow-card: none;                 /* cards are separated by rules, not shadows */
-  --shadow-pop:  0 2px 12px rgb(16 20 19 / 0.10);
-
-  /* Motion */
-  --dur-fast: 120ms; --dur-base: 200ms;
-  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --r-sm: 10px; --r-md: 14px; --r-lg: 20px; --r-xl: 28px; --r-full: 999px;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: linear(…);  /* a small overshoot, for things that land */
 }
-@media (prefers-reduced-motion: reduce) { :root { --dur-fast: 0ms; --dur-base: 0ms; } }
 ```
 
 **Typographic rule that carries the system:** anything that is a *measurement* — age,
-counts, dates, term labels, run status — is set in `--font-data`. Anything a human wrote —
-company, title, location — is set in `--font-ui`. That single split does most of the
-hierarchy work and means the grid stays legible at density without extra weight or color.
+counts, dates, pay, run status — is set in `--font-data`. Anything a human wrote —
+company, title, location — is set in `--font-ui`.
 
-**Contrast floor:** `--ink-3` on `--paper` is the lightest permitted text pairing and
-clears 4.5:1. The decay ramp is **never** used for text — only for the rail and 1px
-strokes, both non-informational on their own (§5.1 covers the redundant text encoding).
+**Contrast floor:** every text pairing clears 4.5:1 in both themes (checked by script).
+Baby blue, tan and rust are never small text on a light surface — `--accent-ink`,
+`--pay-ink` and `--caution-ink` carry the words. The rail is never the sole carrier of age.
+
+### 4.3 Motion
+
+Motion explains state; it is never the only signal and it all stops under
+`prefers-reduced-motion`. Transform and opacity only, CSS first:
+
+| Where | Motion |
+|---|---|
+| First screen | hero, stats and "just posted" rise in with a blur-to-sharp stagger |
+| Live numbers | count up once, on first sight (`components/CountUp.tsx`; SSR renders the final value) |
+| Filter change | the grid is keyed by its filters, so the first 24 cards deal in again |
+| Scroll | the nav deepens its tint and shadow; cards past the first 24 rise in as they enter (scroll-driven, no JS) |
+| Type / density control | one pill springs between equal cells (`--at` / `--n`, set by the server) |
+| Card hover | lift, a spotlight that follows the pointer, the rail widens and glows if fresh |
+| Theme switch | the new theme grows out of the button in a circle (View Transitions) |
+| ⌘K, filter pills, chip check | pop / draw in via `@starting-style` and keyframes |
 
 ---
 
@@ -373,11 +390,11 @@ and it earns no meaning in the system — age is still the only variable that ge
 
 | State | Visual | Behavior |
 |---|---|---|
-| Default | `--surface`, 1px `--rule` bottom border | — |
-| Hover | background lifts to `#FFF`, rail widens 3px → 5px over `--dur-fast` | cursor pointer |
-| Focus-visible | 2px `--ink` outline, 2px offset | full card is one tab stop |
-| Pressed | translateY(1px) | — |
-| Loading | skeleton: three rules at 40%/70%/55% width, no shimmer | `aria-busy="true"` |
+| Default | `--surface`, 1px `--rule` border, `--r-lg` radius, soft shadow | — |
+| Hover | lifts 3px, longer shadow, pointer spotlight, rail widens (and glows if < 24h) | cursor pointer |
+| Focus-visible | 2px `--accent` outline, 3px offset | full card is one tab stop |
+| Pressed | settles to 1px lift, 99.5% scale | — |
+| Loading | skeleton in the card's shape with a slow sheen (still under reduced motion) | `aria-busy="true"` |
 
 **Where the skeleton actually shows.** It's the Suspense fallback for the board, applied
 *only* when the feed isn't already in memory — a cold request has ~23MB of source JSON to
@@ -444,10 +461,10 @@ semantic, not visual, so the filter bar reads as one vocabulary.
 
 | State | Visual |
 |---|---|
-| Default | 1px `--rule`, transparent fill, `--ink-2` |
-| Hover | border → `--rule-strong` |
-| Selected | fill `--ink`, text `--paper`, no border |
-| Disabled | `--ink-3` at 50%, `cursor: not-allowed`, still announced |
+| Default | pill, 1px `--rule-strong`, translucent `--surface`, `--ink-2` |
+| Hover | border → `--ink-3`, lifts 1px |
+| Selected | fill forest (`--primary-bg`), cream text, a check draws in |
+| Disabled | 42% opacity, `cursor: not-allowed`, still announced |
 
 **Counts are not optional.** Every chip shows its result count, computed server-side from
 the current filter state. A chip that leads to zero results is disabled *before* the user
@@ -467,7 +484,8 @@ The component v2 identified as necessary but didn't specify. One instance, above
 | `partial` | any source in the last run has status `failed` or `skipped` | "Couldn't reach {n} of {m} sources. Showing everything else." |
 | `empty` | zero rows in `jobs` | "No postings yet — the fetcher hasn't run." |
 
-Tokens: `--warn-bg` fill, `--warn` text, no icon, no dismiss control. **Not dismissible on
+Tokens: `--caution-bg` fill, `--caution-ink` text (rust — the system's one caution
+color), a small warning glyph, no dismiss control. **Not dismissible on
 purpose** — it's a statement of data quality, and a user who dismisses it is a user
 looking at silently stale data. `role="status"`, `aria-live="polite"`.
 

@@ -1,6 +1,6 @@
 // The link preview — what a board shared in a group chat looks like. It's the
-// board itself in miniature: the newest real postings, each with its decay
-// rail (§4.1), and the live counts. Generated at build and then hourly, from
+// board itself in miniature: the newest real postings, each with its baby-blue
+// freshness rail, and the live counts, in the Grove & Sky palette. Generated at build and then hourly, from
 // the same feed as the page. If the feed can't be read it draws the rails
 // alone rather than fail the build over a preview.
 
@@ -13,8 +13,8 @@ export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const revalidate = 3600;
 
-// §4.2's decay ramp. The only color in the system, so the only color here.
-const RAMP = ['#0E6B57', '#2E7D6B', '#5A8A80', '#8A9994', '#C3C9C5'];
+// The freshness ramp from globals.css: sky settling into earth.
+const RAMP = ['#3FA9E5', '#8ECDF0', '#C4E3F4', '#D5D6B8', '#E4E1CC'];
 
 export default async function Image() {
   let rows: { company: string; title: string; age: string; rail: string }[] = [];
@@ -42,21 +42,22 @@ export default async function Image() {
           width: '100%',
           height: '100%',
           display: 'flex',
-          background: '#F4F5F3',
+          background: 'linear-gradient(135deg, #FFFDF5 0%, #FEFAE0 55%, #E3F2FA 100%)',
           padding: '64px 72px',
           fontFamily: 'sans-serif',
-          color: '#101413',
+          color: '#283618',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', width: 520, justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', fontSize: 56, fontWeight: 700, letterSpacing: -2 }}>
-            open<span style={{ color: '#0E6B57' }}>roles</span>
+            open<span style={{ color: '#2F8FCF', fontStyle: 'italic', fontWeight: 400 }}>roles</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: 60, fontWeight: 700, lineHeight: 1.02, letterSpacing: -2.5 }}>
-              Catch the opening, not the recap.
+            <div style={{ display: 'flex', flexDirection: 'column', fontSize: 60, fontWeight: 700, lineHeight: 1.02, letterSpacing: -2.5 }}>
+              <span>Catch the opening,</span>
+              <span style={{ color: '#2F8FCF', fontStyle: 'italic', fontWeight: 400 }}>not the recap.</span>
             </div>
-            <div style={{ display: 'flex', marginTop: 28, fontSize: 24, color: '#46504C' }}>
+            <div style={{ display: 'flex', marginTop: 28, fontSize: 24, color: '#4A5530' }}>
               {total > 0
                 ? `${total.toLocaleString('en-US')} internship & new-grad roles · ${today.toLocaleString('en-US')} posted today`
                 : 'Internship & new-grad roles, newest first'}
@@ -71,17 +72,20 @@ export default async function Image() {
               style={{
                 display: 'flex',
                 background: '#FFFFFF',
-                border: '1px solid #DDE1DE',
-                marginTop: i === 0 ? 0 : -1,
-                height: 92,
+                border: '1px solid #E8E4CF',
+                borderRadius: 20,
+                marginTop: i === 0 ? 0 : 12,
+                height: 84,
+                boxShadow: '0 8px 24px rgba(40,54,24,0.08)',
+                overflow: 'hidden',
               }}
             >
-              <div style={{ width: 6, background: r.rail }} />
+              <div style={{ width: 6, margin: '16px 0', borderRadius: 3, background: r.rail }} />
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '0 22px', flex: 1 }}>
                 <div style={{ display: 'flex', fontSize: 20, fontWeight: 700 }}>{r.company}</div>
-                <div style={{ display: 'flex', fontSize: 19, color: '#46504C', marginTop: 4 }}>{r.title}</div>
+                <div style={{ display: 'flex', fontSize: 19, color: '#4A5530', marginTop: 4 }}>{r.title}</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', paddingRight: 22, fontSize: 17, color: '#79837E' }}>
+              <div style={{ display: 'flex', alignItems: 'center', paddingRight: 22, fontSize: 17, color: '#1E5F86' }}>
                 {r.age}
               </div>
             </div>

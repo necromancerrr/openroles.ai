@@ -1,10 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="openroles">
-  <!-- The card, reduced to its anatomy: paper, a rule, and the decay rail at the
-       leading edge in --age-0. The rail is the whole identity of the system. -->
-  <rect width="32" height="32" rx="4" fill="#F4F5F3"/>
-  <rect x="0.5" y="0.5" width="31" height="31" rx="3.5" fill="none" stroke="#DDE1DE"/>
-  <rect x="4" y="6" width="4" height="20" rx="1" fill="#0E6B57"/>
-  <rect x="12" y="8" width="16" height="3" rx="1.5" fill="#46504C"/>
-  <rect x="12" y="14.5" width="12" height="3" rx="1.5" fill="#79837E"/>
-  <rect x="12" y="21" width="8" height="3" rx="1.5" fill="#C3C9C5"/>
+  <!-- The card, reduced to its anatomy: cream paper, the forest ink, and the
+       freshness rail at the leading edge in baby blue — "blue = new" is the
+       whole identity of the board. Inverts to forest night in dark mode. -->
+  <style>
+    .paper { fill: #FEFAE0; } .edge { stroke: #28361822; } .rail { fill: #3FA9E5; }
+    .l1 { fill: #283618; } .l2 { fill: #606C38; } .l3 { fill: #DDA15E; }
+    @media (prefers-color-scheme: dark) {
+      .paper { fill: #11160A; } .edge { stroke: #FEFAE022; } .rail { fill: #7CCBFA; }
+      .l1 { fill: #FEFAE0; } .l2 { fill: #B5C27A; }
+    }
+  </style>
+  <rect class="paper" width="32" height="32" rx="8"/>
+  <rect class="edge" x="0.5" y="0.5" width="31" height="31" rx="7.5" fill="none"/>
+  <rect class="rail" x="5" y="7" width="3.5" height="18" rx="1.75"/>
+  <rect class="l1" x="12" y="8.5" width="15" height="3.2" rx="1.6"/>
+  <rect class="l2" x="12" y="14.4" width="11" height="3.2" rx="1.6"/>
+  <rect class="l3" x="12" y="20.3" width="7" height="3.2" rx="1.6"/>
 </svg>
