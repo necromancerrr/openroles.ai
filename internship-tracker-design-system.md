@@ -276,7 +276,7 @@ one thing everywhere it appears:
 | Baby blue | `#8ECDF0` | **new / live / now** | freshness rail, `NEW`, the live dot, "new since your last visit", focus rings, hover glow |
 | Forest | `#283618` | ink, choice | text, selected chips, primary buttons; the night in dark mode |
 | Olive | `#606C38` | taxonomy, good news | category · term, "Sponsors visas", a source that's ok |
-| Cream | `#FEFAE0` | paper, light | the page, and the light behind the glass |
+| Cream | `#FEFAE0` | paper | the page, one flat color edge to edge |
 | Tan | `#DDA15E` | **money** | the pay tag |
 | Rust | `#BC6C25` | **caution** | "No sponsorship", "US citizens only", a failed source, the stale-data banner |
 
@@ -285,14 +285,14 @@ thing that isn't new or live.
 
 **Glass is for chrome; cards are solid.** The floating nav, the filter panel, the sticky
 grid header and the ⌘K palette are liquid glass — tint, `blur(22px) saturate(170%)`, a
-bright top rim and a faint diagonal sheen — over a slow aurora of the palette. Glass is a
+bright top rim and a faint diagonal sheen — over a page that is one flat color. Glass is a
 progressive enhancement: the default is a near-opaque panel, used whenever
 `backdrop-filter` is missing or the reader prefers reduced transparency or more contrast.
 Cards, the surface people actually read, are solid white (forest-night in dark mode) with
 real gaps and soft shadows. Never animate the blur; keep about four glass layers in view.
 
-**Themes.** Light (warm white, cream aurora) and dark (forest night `#11160A`, cream ink,
-brighter sky). The reader's choice is stored in `localStorage` (`or:theme`); with none, the
+**Themes.** One background color per theme, nothing behind it: light is cream `#FEFAE0`;
+dark is forest night `#11160A`, with cream ink and a brighter sky. The reader's choice is stored in `localStorage` (`or:theme`); with none, the
 system preference decides through CSS alone.
 
 ### 4.2 Tokens
@@ -301,7 +301,7 @@ The full set is in `app/globals.css`; the load-bearing ones:
 
 ```css
 :root {
-  --bg: #FFFDF5;  --surface: #FFFFFF;  --surface-2: #FBF8EC;
+  --bg: #FEFAE0;  --surface: #FFFFFF;  --surface-2: #FBF8EC;
   --ink: #283618; --ink-2: #4A5530;    --ink-3: #6B7150;
 
   --accent: #2F8FCF;       /* strokes, large type (focus, wordmark) */
